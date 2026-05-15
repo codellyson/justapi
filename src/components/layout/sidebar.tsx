@@ -3,30 +3,31 @@
 import { useState } from "react";
 import { Settings, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "../../contexts/theme-context";
+import { useUIStore } from "../../stores/use-ui-store";
 import { CollectionsList } from "../collections/collections-list";
 import { HistoryPanel } from "../history/history-panel";
+import { DebuggerPanel } from "../debugger/debugger-panel";
 import { EnvironmentSelector } from "../environment/environment-selector";
 import { Button } from "../ui/button";
 import { Logo } from "../ui/logo";
 import { SettingsModal } from "./settings-modal";
 import { cn } from "../../utils/cn";
 
-type SidebarSection = "collections" | "history";
-
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const sections: { id: SidebarSection; label: string }[] = [
+const sections = [
   { id: "collections", label: "Collections" },
+  { id: "debug", label: "Debug" },
   { id: "history", label: "History" },
-];
+] as const;
 
 export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { mode, toggleMode } = useTheme();
-  const [activeSection, setActiveSection] =
-    useState<SidebarSection>("collections");
+  const activeSection = useUIStore((s) => s.sidebarSection);
+  const setActiveSection = useUIStore((s) => s.setSidebarSection);
   const [showSettings, setShowSettings] = useState(false);
 
   return (
@@ -82,6 +83,7 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         </div>
         <div className="flex-1 overflow-auto">
           {activeSection === "collections" && <CollectionsList />}
+          {activeSection === "debug" && <DebuggerPanel />}
           {activeSection === "history" && <HistoryPanel />}
         </div>
         <div className="px-4 py-3 border-t border-border space-y-2">

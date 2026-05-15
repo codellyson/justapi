@@ -7,6 +7,7 @@ import {
   CollectionItem,
 } from "../../stores/use-collections-store";
 import { useRequestStore } from "../../stores/use-request-store";
+import { useDebuggerStore } from "../../stores/use-debugger-store";
 import { useIsDirty } from "../../hooks/use-is-dirty";
 import { CollectionItem as CollectionItemComponent } from "./collection-item";
 import { Button } from "../ui/button";
@@ -41,6 +42,8 @@ export const CollectionsList = () => {
         return;
       }
     }
+    useDebuggerStore.getState().setSelected(null);
+    useDebuggerStore.getState().setReplayOriginal(null);
     setActiveCollectionId(item.id);
     setMethod(item.method);
     setUrl(item.url);
@@ -60,6 +63,8 @@ export const CollectionsList = () => {
         return;
       }
     }
+    useDebuggerStore.getState().setSelected(null);
+    useDebuggerStore.getState().setReplayOriginal(null);
     reset();
     setActiveCollectionId(null);
   };

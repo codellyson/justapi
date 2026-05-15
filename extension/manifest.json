@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "QuickRest — API Debugger",
+  "version": "0.2.0",
+  "description": "Capture fetch and XHR calls from any tab and stream them to the QuickRest web app for inspection and replay.",
+  "minimum_chrome_version": "114",
+  "permissions": ["scripting", "tabs", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "QuickRest — open in your QuickRest tab to use",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "https://quickrest.kreativekorna.com/*"
+      ],
+      "js": ["content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost/*",
+      "http://127.0.0.1/*",
+      "https://quickrest.kreativekorna.com/*"
+    ]
+  }
+}

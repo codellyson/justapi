@@ -2,6 +2,7 @@
 
 import { useHistoryStore } from '../../stores/use-history-store';
 import { useRequestStore } from '../../stores/use-request-store';
+import { useDebuggerStore } from '../../stores/use-debugger-store';
 import { HistoryItem as HistoryItemComponent } from './history-item';
 import { Button } from '../ui/button';
 import { Trash2, Clock } from 'lucide-react';
@@ -12,6 +13,8 @@ export const HistoryPanel = () => {
   const { setMethod, setUrl } = useRequestStore();
 
   const handleItemClick = (item: { method: HttpMethod; url: string }) => {
+    useDebuggerStore.getState().setSelected(null);
+    useDebuggerStore.getState().setReplayOriginal(null);
     setMethod(item.method as HttpMethod);
     setUrl(item.url);
   };

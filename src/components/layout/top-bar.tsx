@@ -1,6 +1,6 @@
 'use client';
 
-import { Send, Save, Edit, AlertCircle, Share2, Check, Menu } from "lucide-react";
+import { Send, Save, Edit, AlertCircle, Share2, Check, Menu, Code2 } from "lucide-react";
 import { useRequestStore } from "../../stores/use-request-store";
 import { useRequest } from "../../hooks/use-request";
 import { useResponseStore } from "../../stores/use-response-store";
@@ -15,6 +15,7 @@ import { cn } from "../../utils/cn";
 import { generateShareableLink } from "../../utils/sharing";
 import { useToastStore } from "../../stores/use-toast-store";
 import { useIsDirty } from "../../hooks/use-is-dirty";
+import { SnippetModal } from "../request/snippet-modal";
 
 interface TopBarProps {
   onOpenSidebar: () => void;
@@ -43,6 +44,7 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
     useRequestStore.getState().url
   );
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [snippetOpen, setSnippetOpen] = useState(false);
 
   const activeCollection = items.find((item) => item.id === activeCollectionId);
   const hasUnsavedChanges = useIsDirty();
@@ -139,7 +141,7 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
               size="sm"
               onClick={send}
               disabled={loading || !url.trim()}
-              title="Send request"
+              title="Send request (⌘/Ctrl+Enter)"
             >
               <Send className="w-4 h-4" />
             </Button>
@@ -182,6 +184,15 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
             <Button
               variant="ghost"
               size="sm"
+              onClick={() => setSnippetOpen(true)}
+              title="Generate code snippet"
+              disabled={!url.trim()}
+            >
+              <Code2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleShare}
               title="Share this request configuration"
               className="relative"
@@ -195,6 +206,7 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
           </div>
         </div>
       </div>
+      <SnippetModal isOpen={snippetOpen} onClose={() => setSnippetOpen(false)} />
       <Modal
         isOpen={showSaveModal}
         onClose={() => {

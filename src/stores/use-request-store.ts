@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { HttpMethod } from '../utils/http';
 import { KeyValuePair } from '../components/ui/key-value-editor';
+import { FormDataPair } from '../utils/form-data';
 
 export type BodyType = 'json' | 'form-data' | 'raw' | 'none';
 export type AuthType = 'none' | 'bearer' | 'basic' | 'api-key';
@@ -12,6 +13,7 @@ interface RequestState {
   headers: KeyValuePair[];
   bodyType: BodyType;
   body: string;
+  formData: FormDataPair[];
   authType: AuthType;
   authConfig: {
     bearerToken?: string;
@@ -26,6 +28,7 @@ interface RequestState {
   setHeaders: (headers: KeyValuePair[]) => void;
   setBodyType: (type: BodyType) => void;
   setBody: (body: string) => void;
+  setFormData: (formData: FormDataPair[]) => void;
   setAuthType: (type: AuthType) => void;
   setAuthConfig: (config: Partial<RequestState['authConfig']>) => void;
   reset: () => void;
@@ -43,6 +46,7 @@ export const useRequestStore = create<RequestState>((set) => ({
   headers: defaultHeaders,
   bodyType: 'none',
   body: '',
+  formData: [],
   authType: 'none',
   authConfig: {},
   setMethod: (method) => set({ method }),
@@ -51,6 +55,7 @@ export const useRequestStore = create<RequestState>((set) => ({
   setHeaders: (headers) => set({ headers }),
   setBodyType: (type) => set({ bodyType: type }),
   setBody: (body) => set({ body }),
+  setFormData: (formData) => set({ formData }),
   setAuthType: (type) => set({ authType: type }),
   setAuthConfig: (config) =>
     set((state) => ({ authConfig: { ...state.authConfig, ...config } })),
@@ -62,6 +67,7 @@ export const useRequestStore = create<RequestState>((set) => ({
       headers: defaultHeaders,
       bodyType: 'none',
       body: '',
+      formData: [],
       authType: 'none',
       authConfig: {},
     }),

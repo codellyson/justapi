@@ -37,6 +37,7 @@ interface DebuggerState {
   addCapture: (entry: CapturedRequest) => void;
   updateCapture: (entry: CapturedRequest) => void;
   evictCaptures: (requestIds: string[]) => void;
+  importCaptures: (entries: CapturedRequest[]) => void;
 }
 
 export const useDebuggerStore = create<DebuggerState>((set) => ({
@@ -97,4 +98,7 @@ export const useDebuggerStore = create<DebuggerState>((set) => ({
             : state.selectedRequestId,
       };
     }),
+
+  importCaptures: (entries) =>
+    set((state) => ({ captures: [...state.captures, ...entries] })),
 }));

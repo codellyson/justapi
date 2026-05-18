@@ -8,6 +8,7 @@ import {
   findTheme,
   rgbTripletToHex,
   type ThemePlugin,
+  type ThemeVariant,
 } from "../utils/theme-plugins";
 
 type Mode = "light" | "dark";
@@ -18,6 +19,9 @@ export interface PaletteColors {
   accentText: string;
 }
 
+/** Full palette for the current theme + mode, with all colors as hex strings. */
+export type PaletteHex = { [K in keyof ThemeVariant]: string };
+
 interface ThemeContextType {
   mode: Mode;
   toggleMode: () => void;
@@ -26,6 +30,8 @@ interface ThemeContextType {
   themes: ThemePlugin[];
   theme: ThemePlugin;
   colors: PaletteColors;
+  /** Every palette color for the active theme + mode, as hex. */
+  palette: PaletteHex;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -81,6 +87,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [variant.accent, variant.accentHover, variant.accentText]
   );
 
+  const palette: PaletteHex = useMemo(
+    () => ({
+      bg: rgbTripletToHex(variant.bg),
+      bgSecondary: rgbTripletToHex(variant.bgSecondary),
+      border: rgbTripletToHex(variant.border),
+      textPrimary: rgbTripletToHex(variant.textPrimary),
+      textSecondary: rgbTripletToHex(variant.textSecondary),
+      textMuted: rgbTripletToHex(variant.textMuted),
+      accent: rgbTripletToHex(variant.accent),
+      accentHover: rgbTripletToHex(variant.accentHover),
+      accentText: rgbTripletToHex(variant.accentText),
+      danger: rgbTripletToHex(variant.danger),
+      success: rgbTripletToHex(variant.success),
+      warning: rgbTripletToHex(variant.warning),
+    }),
+    [variant]
+  );
+
   const toggleMode = () => setMode((prev) => (prev === "light" ? "dark" : "light"));
   const setThemeId = (id: string) => setThemeIdState(id);
 
@@ -94,6 +118,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         themes: BUILT_IN_THEMES,
         theme,
         colors,
+        palette,
       }}
     >
       {children}

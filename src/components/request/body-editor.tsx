@@ -2,10 +2,13 @@
 
 import { useRequestStore } from "../../stores/use-request-store";
 import { CodeEditor } from "../ui/code-editor";
+import { FormDataEditor } from "./form-data-editor";
+import { hasEnabledFile } from "../../utils/form-data";
 import { cn } from "../../utils/cn";
 
 export const BodyEditor = () => {
-  const { bodyType, body, setBodyType, setBody } = useRequestStore();
+  const { bodyType, body, formData, setBodyType, setBody, setFormData } =
+    useRequestStore();
 
   return (
     <div className="space-y-3">
@@ -35,9 +38,14 @@ export const BodyEditor = () => {
               height="calc(100vh - 200px)"
             />
           ) : (
-            <div className="p-4 border border-border rounded-md bg-bg-secondary">
-              <p className="text-sm text-secondary">
-                Form data editor coming soon
+            <div className="space-y-2">
+              <FormDataEditor items={formData} onChange={setFormData} />
+              <p className="text-[11px] text-muted">
+                {hasEnabledFile(formData) ? (
+                  <>Sent as <code className="font-mono">multipart/form-data</code> (one or more file rows).</>
+                ) : (
+                  <>Sent as <code className="font-mono">application/x-www-form-urlencoded</code>. Switch a row to &quot;File&quot; to upgrade to multipart.</>
+                )}
               </p>
             </div>
           )}

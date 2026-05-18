@@ -5,6 +5,7 @@ import { useHistoryStore } from "../stores/use-history-store";
 import { useEnvironmentStore } from "../stores/use-environment-store";
 import { sendRequest, RequestConfig } from "../utils/http";
 import { replaceDynamicVariables, replaceVariables } from "../utils/variables";
+import { buildMultipart, buildUrlEncoded, hasEnabledFile } from "../utils/form-data";
 
 export const useRequest = () => {
   const request = useRequestStore();
@@ -80,7 +81,15 @@ export const useRequest = () => {
       } else if (request.bodyType === "raw" && request.body) {
         body = request.body;
       } else if (request.bodyType === "form-data") {
-        body = new FormData();
+        const resolve = (text: string) => replaceVariables(text, variables);
+        if (hasEnabledFile(request.formData)) {
+          body = buildMultipart(request.formData, resolve);
+          // Let the runtime pick the multipart boundary; don't pin Content-Type.
+          delete headers["Content-Type"];
+        } else {
+          body = buildUrlEncoded(request.formData, resolve);
+          headers["Content-Type"] = "application/x-www-form-urlencoded";
+        }
       }
 
       const config: RequestConfig = {

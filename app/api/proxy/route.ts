@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Node's fetch (undici) resolves `localhost` to ::1 first on many systems,
+// but most dev servers only listen on 127.0.0.1 — yielding ECONNREFUSED.
+// Rewrite the URL to 127.0.0.1 and pin the original Host header so vhost
+// routing still works.
+function normalizeLocalhost(rawUrl: string): {
+  url: string;
+  host: string | null;
+} {
+  try {
+    const u = new URL(rawUrl);
+    if (u.hostname === "localhost") {
+      const host = u.host;
+      u.hostname = "127.0.0.1";
+      return { url: u.toString(), host };
+    }
+  } catch {
+    // fall through to return the raw url
+  }
+  return { url: rawUrl, host: null };
+}
+
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const body = await request.json();
     const {
@@ -30,6 +52,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const { url: resolvedUrl, host: originalHost } =
+      normalizeLocalhost(targetUrl);
+
     const requestHeaders: Record<string, string> = {};
     if (headers) {
       Object.entries(headers).forEach(([key, value]) => {
@@ -37,6 +62,9 @@ export async function POST(request: NextRequest) {
           requestHeaders[key] = String(value);
         }
       });
+    }
+    if (originalHost && !requestHeaders["host"] && !requestHeaders["Host"]) {
+      requestHeaders["Host"] = originalHost;
     }
 
     const fetchOptions: RequestInit = {
@@ -57,15 +85,20 @@ export async function POST(request: NextRequest) {
       fetchOptions.body = undefined;
     }
 
-    const startTime = Date.now();
-    const response = await fetch(targetUrl, fetchOptions);
-    const endTime = Date.now();
-    const time = endTime - startTime;
+    const response = await fetch(resolvedUrl, fetchOptions);
+    const time = Date.now() - startTime;
 
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
     });
+    // getSetCookie() preserves each Set-Cookie line separately; forEach folds
+    // them with commas, which is ambiguous when cookies contain Expires dates.
+    const cookies =
+      typeof (response.headers as Headers & { getSetCookie?: () => string[] })
+        .getSetCookie === 'function'
+        ? (response.headers as Headers & { getSetCookie: () => string[] }).getSetCookie()
+        : [];
 
     const contentType = response.headers.get("content-type") || "";
     let data: unknown;
@@ -92,27 +125,24 @@ export async function POST(request: NextRequest) {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
+      cookies,
       data,
       time,
       size,
     });
   } catch (error) {
-    const startTime = Date.now();
-    const endTime = Date.now();
-    const time = endTime - startTime;
-
-    return NextResponse.json(
-      {
-        status: 0,
-        statusText: error instanceof Error ? error.message : "Network Error",
-        headers: {},
-        data: {
-          error: error instanceof Error ? error.message : "Network Error",
-        },
-        time,
-        size: 0,
-      },
-      { status: 500 }
-    );
+    const time = Date.now() - startTime;
+    const message =
+      error instanceof Error ? error.message : "Network Error";
+    // Return 200 with the failure encoded in the body so the client can
+    // surface the real cause instead of a generic 500.
+    return NextResponse.json({
+      status: 0,
+      statusText: message,
+      headers: {},
+      data: { error: message },
+      time,
+      size: 0,
+    });
   }
 }

@@ -6,6 +6,7 @@ import { useDebuggerStore } from '../../stores/use-debugger-store';
 import { ResponseMeta } from './response-meta';
 import { ResponseBody } from './response-body';
 import { ResponseHeaders } from './response-headers';
+import { ResponseCookies } from './response-cookies';
 import { StatusBadge } from '../ui/status-badge';
 import { cn } from '../../utils/cn';
 import { lineDiff, pretty, shouldDiff } from '../../utils/diff';
@@ -13,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 import type { HttpResponse } from '../../utils/http';
 import type { CapturedRequest } from '../../utils/extension-bridge';
 
-type Tab = 'body' | 'headers' | 'diff';
+type Tab = 'body' | 'headers' | 'cookies' | 'diff';
 type Source = 'live' | 'captured';
 
 export const ResponsePanel = () => {
@@ -86,6 +87,7 @@ export const ResponsePanel = () => {
             <div className="flex-1 overflow-auto">
               {activeTab === 'body' && <ResponseBody response={response} />}
               {activeTab === 'headers' && <ResponseHeaders response={response} />}
+              {activeTab === 'cookies' && <ResponseCookies response={response} />}
               {activeTab === 'diff' && replayOriginal && (
                 <DiffView captured={replayOriginal} response={response} />
               )}
@@ -117,6 +119,7 @@ const Tabs = ({
   const items: { id: Tab; label: string }[] = [
     { id: 'body', label: 'Body' },
     { id: 'headers', label: 'Headers' },
+    { id: 'cookies', label: 'Cookies' },
   ];
   if (canDiff) items.push({ id: 'diff', label: 'Diff' });
   return (

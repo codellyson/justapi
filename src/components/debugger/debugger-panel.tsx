@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Pause, Play, Plug, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Pause, Play, Plug, RefreshCw, Search, Trash2, Upload, X } from 'lucide-react';
 import { useDebuggerStore } from '../../stores/use-debugger-store';
 import { useRequestStore } from '../../stores/use-request-store';
 import { useCollectionsStore } from '../../stores/use-collections-store';
+import { useToastStore } from '../../stores/use-toast-store';
 import { extensionBridge } from '../../utils/extension-bridge';
+import { parseHar } from '../../utils/har';
 import { Button } from '../ui/button';
 import { DebuggerItem } from './debugger-item';
 import { cn } from '../../utils/cn';
@@ -69,12 +71,36 @@ export const DebuggerPanel = () => {
     setReplayOriginal,
     paused,
     lastError,
+    importCaptures,
   } = useDebuggerStore();
   const { setActiveCollectionId } = useCollectionsStore();
+  const { showToast } = useToastStore();
   const requestStore = useRequestStore();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [filter, setFilter] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-importing the same file
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const entries = parseHar(text);
+      if (entries.length === 0) {
+        showToast('warning', 'No HTTP entries found in HAR file');
+        return;
+      }
+      importCaptures(entries);
+      showToast('success', `Imported ${entries.length} request${entries.length === 1 ? '' : 's'}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      showToast('error', `HAR import failed: ${msg}`);
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -164,12 +190,29 @@ export const DebuggerPanel = () => {
             {status === 'unknown' ? 'Looking for extension…' : 'Install the QuickRest extension and reload this tab.'}
           </p>
           {status === 'no-extension' && (
-            <button
-              onClick={reloadPage}
-              className="text-xs text-accent hover:underline"
-            >
-              Reload page
-            </button>
+            <>
+              <button
+                onClick={reloadPage}
+                className="text-xs text-accent hover:underline mb-3"
+              >
+                Reload page
+              </button>
+              <div className="text-[11px] text-muted mb-2">or</div>
+              <button
+                onClick={handleImportClick}
+                className="text-xs text-accent hover:underline inline-flex items-center gap-1.5"
+              >
+                <Upload className="w-3 h-3" />
+                Import a HAR file
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".har,application/json"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </>
           )}
         </div>
       </div>
@@ -202,6 +245,22 @@ export const DebuggerPanel = () => {
                 Attach tab
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleImportClick}
+              aria-label="Import HAR"
+              title="Import HAR file"
+            >
+              <Upload className="w-3.5 h-3.5" />
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".har,application/json"
+              onChange={handleFileChange}
+              className="hidden"
+            />
             {captures.length > 0 && (
               <Button variant="ghost" size="sm" onClick={clear} aria-label="Clear">
                 <Trash2 className="w-3.5 h-3.5" />

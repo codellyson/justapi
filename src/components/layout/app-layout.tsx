@@ -9,6 +9,8 @@ import { ToastContainer } from "../ui/toast";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { DebuggerDetail } from "../debugger/debugger-detail";
 import { IntroOverlay } from "./intro-overlay";
+import { KeyboardShortcuts } from "./keyboard-shortcuts";
+import { SplitPane } from "./split-pane";
 import { loadConfigFromUrl, applySharedConfig } from "../../utils/sharing";
 import { useToastStore } from "../../stores/use-toast-store";
 import { useDebuggerStore } from "../../stores/use-debugger-store";
@@ -59,20 +61,21 @@ export const AppLayout = () => {
         ) : (
           <>
             <TopBar onOpenSidebar={() => setSidebarOpen(true)} />
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-              <div className="flex flex-col overflow-hidden flex-1 lg:w-1/2 min-h-0 border-b border-border lg:border-b-0 lg:border-r">
-                <RequestTabs className="flex-1" />
-              </div>
-              <div className="flex-1 flex flex-col overflow-hidden min-h-0 lg:w-1/2">
-                <ResponsePanel />
-              </div>
-            </div>
+            <SplitPane
+              storageKey="request-response"
+              defaultLeftPercent={40}
+              className="flex-1"
+            >
+              <RequestTabs className="flex-1" />
+              <ResponsePanel />
+            </SplitPane>
           </>
         )}
       </div>
       <ToastContainer toasts={toasts} onClose={removeToast} />
       <ThemeToggle />
       <IntroOverlay />
+      <KeyboardShortcuts />
     </div>
   );
 };

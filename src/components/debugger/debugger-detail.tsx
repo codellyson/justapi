@@ -10,6 +10,7 @@ import { useRequest } from '../../hooks/use-request';
 import { Button } from '../ui/button';
 import { Modal } from '../ui/modal';
 import { Input } from '../ui/input';
+import { Tabs, type TabItem } from '../ui/tabs';
 import { StatusBadge } from '../ui/status-badge';
 import { methodPillColor } from '../request/method-selector';
 import { HttpMethod } from '../../utils/http';
@@ -153,20 +154,16 @@ export const DebuggerDetail = () => {
         onSave={openSaveModal}
       />
 
-      <div className="flex border-b border-border">
-        {(['request', 'response'] as DetailTab[]).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              'px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
-              tab === t ? 'border-accent text-primary' : 'border-transparent text-secondary hover:text-primary'
-            )}
-          >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
-          </button>
-        ))}
-      </div>
+      <Tabs<DetailTab>
+        items={
+          [
+            { id: 'request', label: 'Request' },
+            { id: 'response', label: 'Response' },
+          ] satisfies TabItem<DetailTab>[]
+        }
+        active={tab}
+        onChange={setTab}
+      />
 
       <div className="flex-1 overflow-auto p-4 space-y-4">
         {tab === 'request' ? <RequestTab entry={entry} /> : <ResponseTab entry={entry} />}

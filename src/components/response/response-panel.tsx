@@ -7,10 +7,11 @@ import { ResponseMeta } from './response-meta';
 import { ResponseBody } from './response-body';
 import { ResponseHeaders } from './response-headers';
 import { ResponseCookies } from './response-cookies';
+import { Tabs as TabStrip, type TabItem } from '../ui/tabs';
 import { StatusBadge } from '../ui/status-badge';
 import { cn } from '../../utils/cn';
 import { lineDiff, pretty, shouldDiff } from '../../utils/diff';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Send, AlertTriangle } from 'lucide-react';
 import type { HttpResponse } from '../../utils/http';
 import type { CapturedRequest } from '../../utils/extension-bridge';
 
@@ -40,7 +41,7 @@ export const ResponsePanel = () => {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-muted" />
+          <Loader2 className="w-6 h-6 animate-spin text-accent" />
           <p className="text-sm text-secondary">Sending request…</p>
         </div>
       </div>
@@ -50,7 +51,12 @@ export const ResponsePanel = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center h-full px-6">
-        <p className="text-sm text-danger font-medium text-center">{error}</p>
+        <div className="flex flex-col items-center gap-3 max-w-sm text-center">
+          <div className="w-10 h-10 rounded-full bg-danger/10 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-danger" />
+          </div>
+          <p className="text-sm text-danger font-medium">{error}</p>
+        </div>
       </div>
     );
   }
@@ -65,8 +71,18 @@ export const ResponsePanel = () => {
       );
     }
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-sm text-muted">No response yet</p>
+      <div className="flex items-center justify-center h-full px-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="w-10 h-10 rounded-full bg-bg-secondary border border-border flex items-center justify-center">
+            <Send className="w-4 h-4 text-muted" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-primary">No response yet</p>
+            <p className="text-xs text-muted">
+              Press <kbd className="px-1.5 py-0.5 rounded border border-border bg-bg-secondary font-mono text-[10px]">⌘ Enter</kbd> or click Send
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -83,7 +99,7 @@ export const ResponsePanel = () => {
         <>
           <ResponseMeta response={response} />
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Tabs active={activeTab} onChange={setActiveTab} canDiff={canDiff} />
+            <Tabs active={activeTab} onChange={setActiveTab} canDiff={canDiff} response={response} />
             <div className="flex-1 overflow-auto">
               {activeTab === 'body' && <ResponseBody response={response} />}
               {activeTab === 'headers' && <ResponseHeaders response={response} />}
@@ -111,35 +127,22 @@ const Tabs = ({
   active,
   onChange,
   canDiff,
+  response,
 }: {
   active: Tab;
   onChange: (t: Tab) => void;
   canDiff: boolean;
+  response?: HttpResponse | null;
 }) => {
-  const items: { id: Tab; label: string }[] = [
+  const headerCount = response ? Object.keys(response.headers).length : 0;
+  const cookieCount = response?.cookies?.length || 0;
+  const items: TabItem<Tab>[] = [
     { id: 'body', label: 'Body' },
-    { id: 'headers', label: 'Headers' },
-    { id: 'cookies', label: 'Cookies' },
+    { id: 'headers', label: 'Headers', badge: headerCount || undefined },
+    { id: 'cookies', label: 'Cookies', badge: cookieCount || undefined },
   ];
   if (canDiff) items.push({ id: 'diff', label: 'Diff' });
-  return (
-    <div className="flex border-b border-border">
-      {items.map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => onChange(tab.id)}
-          className={cn(
-            'px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
-            active === tab.id
-              ? 'border-accent text-primary'
-              : 'border-transparent text-secondary hover:text-primary'
-          )}
-        >
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
+  return <TabStrip items={items} active={active} onChange={onChange} />;
 };
 
 interface ReplayBannerProps {
@@ -212,7 +215,7 @@ const CapturedView = ({ entry, activeTab, setActiveTab, canDiff, response }: Cap
       </div>
       <div className="flex-1 flex flex-col overflow-hidden">
         <Tabs active={activeTab} onChange={setActiveTab} canDiff={canDiff} />
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto px-3 py-3">
           {activeTab === 'body' && (
             <pre className="text-xs font-mono whitespace-pre-wrap break-words bg-bg-secondary border border-border rounded-md p-3 text-primary">
               {pretty(entry.responseBody, entry.mimeType) || (

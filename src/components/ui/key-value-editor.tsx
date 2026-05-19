@@ -320,15 +320,13 @@ export const KeyValueEditor = ({
           </Button>
         </div>
       ))}
-      <Button
-        variant="ghost"
-        size="sm"
+      <button
         onClick={addItem}
-        className="w-full justify-start"
+        className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline pt-1"
       >
-        <Plus className="w-3.5 h-3.5 mr-1.5" />
+        <Plus className="w-3.5 h-3.5" />
         Add row
-      </Button>
+      </button>
     </div>
   );
 };

@@ -16,18 +16,18 @@ export const ResponseCookies = ({ response }: ResponseCookiesProps) => {
 
   if (response.cookies === undefined) {
     return (
-      <div className="p-4 text-xs text-muted">
+      <div className="px-3 py-3 text-xs text-muted">
         Cookies aren&apos;t visible for direct browser requests. The proxy path surfaces them automatically.
       </div>
     );
   }
 
   if (cookies.length === 0) {
-    return <div className="p-4 text-xs text-muted">No cookies set by this response.</div>;
+    return <div className="px-3 py-3 text-xs text-muted">No cookies set by this response.</div>;
   }
 
   return (
-    <div className="p-4 space-y-2">
+    <div className="px-3 py-3 space-y-2">
       {cookies.map((c, i) => (
         <div
           key={`${c.name}-${i}`}

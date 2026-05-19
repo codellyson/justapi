@@ -6,6 +6,7 @@ import { useRequest } from "../../hooks/use-request";
 import { useResponseStore } from "../../stores/use-response-store";
 import { MethodSelector } from "../request/method-selector";
 import { URLInput } from "../request/url-input";
+import { EnvironmentChip } from "../environment/environment-chip";
 import { Button } from "../ui/button";
 import { useCollectionsStore } from "../../stores/use-collections-store";
 import { useState, useMemo } from "react";
@@ -109,27 +110,34 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
   return (
     <>
       <div className="flex flex-col border-b border-border bg-bg">
-        {activeCollection && (
-          <div className="px-4 py-1.5 border-b border-border flex items-center gap-1.5 text-xs">
-            {hasUnsavedChanges ? (
-              <AlertCircle className="w-3 h-3 text-warning" />
+        <div className="px-4 py-1.5 border-b border-border flex items-center justify-between gap-3 text-xs min-h-[28px]">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {activeCollection ? (
+              <>
+                {hasUnsavedChanges ? (
+                  <AlertCircle className="w-3 h-3 text-warning shrink-0" />
+                ) : (
+                  <Edit className="w-3 h-3 text-muted shrink-0" />
+                )}
+                <span className={cn("font-medium shrink-0", hasUnsavedChanges ? "text-warning" : "text-muted")}>
+                  {hasUnsavedChanges ? "Unsaved changes" : "Editing"}
+                </span>
+                <span className="text-muted shrink-0">·</span>
+                <span className="text-primary truncate">{activeCollection.name}</span>
+              </>
             ) : (
-              <Edit className="w-3 h-3 text-muted" />
+              <span className="text-muted">New request</span>
             )}
-            <span className={cn("font-medium", hasUnsavedChanges ? "text-warning" : "text-muted")}>
-              {hasUnsavedChanges ? "Unsaved changes" : "Editing"}
-            </span>
-            <span className="text-muted">·</span>
-            <span className="text-primary truncate">{activeCollection.name}</span>
           </div>
-        )}
-        <div className="flex flex-col gap-2 p-3 lg:flex-row lg:items-center">
-          <div className="flex items-center gap-2 lg:flex-1">
+          <EnvironmentChip />
+        </div>
+        <div className="flex flex-col gap-2 px-3 py-2.5 lg:flex-row lg:items-center">
+          <div className="flex items-center gap-2 lg:flex-1 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={onOpenSidebar}
-              className="w-9 h-9 p-0 lg:hidden"
+              className="w-9 h-9 p-0 lg:hidden shrink-0"
               aria-label="Open menu"
             >
               <Menu className="w-5 h-5" />
@@ -142,11 +150,13 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
               onClick={send}
               disabled={loading || !url.trim()}
               title="Send request (⌘/Ctrl+Enter)"
+              className="shrink-0 px-3.5"
             >
               <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">Send</span>
             </Button>
           </div>
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center justify-end gap-1">
             <Button
               variant={
                 hasUnsavedChanges && activeCollection ? "primary" : "secondary"
@@ -158,13 +168,15 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
                 setShowSaveModal(true);
               }}
               className={cn(
+                "w-9 h-9 p-0",
                 hasUnsavedChanges && activeCollection && "animate-pulse"
               )}
               title={activeCollection ? "Update request" : "Save request"}
+              aria-label={activeCollection ? "Update request" : "Save request"}
             >
               <Save className="w-4 h-4" />
               {hasUnsavedChanges && activeCollection && (
-                <span className="ml-0.5 text-xs">●</span>
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-current" />
               )}
             </Button>
             {activeCollection && (
@@ -176,17 +188,21 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
                   setSaveAsNew(true);
                   setShowSaveModal(true);
                 }}
-                title="Save as new request"
+                title="Save as a new request"
+                className="px-2 text-xs"
               >
-                <span className="text-xs">Save As</span>
+                Save As
               </Button>
             )}
+            <span className="w-px h-5 bg-border mx-1" aria-hidden="true" />
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setSnippetOpen(true)}
               title="Generate code snippet"
               disabled={!url.trim()}
+              className="w-9 h-9 p-0"
+              aria-label="Generate code snippet"
             >
               <Code2 className="w-4 h-4" />
             </Button>
@@ -195,7 +211,8 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
               size="sm"
               onClick={handleShare}
               title="Share this request configuration"
-              className="relative"
+              className="w-9 h-9 p-0 relative"
+              aria-label="Share request"
             >
               {shareLinkCopied ? (
                 <Check className="w-4 h-4" />

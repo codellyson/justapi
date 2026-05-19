@@ -14,7 +14,7 @@ export const ResponseHeaders = ({ response }: ResponseHeadersProps) => {
   };
 
   return (
-    <div className="p-4">
+    <div className="px-3 py-3">
       <div className="space-y-1">
         {Object.entries(response.headers).map(([key, value]) => (
           <div

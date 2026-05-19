@@ -35,12 +35,12 @@ export const FormDataEditor = ({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <div className="hidden md:grid grid-cols-[1fr_1fr_90px_28px_28px] gap-2 text-[11px] uppercase tracking-wide text-muted">
-        <span>Field name</span>
-        <span>Value</span>
-        <span>Type</span>
-        <span className="text-center">On</span>
-        <span />
+      <div className="grid grid-cols-[1fr_1fr_90px_auto_auto] gap-2 items-center text-xs font-medium text-muted pb-2 border-b border-border">
+        <div>Field name</div>
+        <div>Value</div>
+        <div>Type</div>
+        <div className="text-center px-1">On</div>
+        <div className="w-8" />
       </div>
       {items.map((item) => (
         <Row
@@ -52,7 +52,7 @@ export const FormDataEditor = ({
       ))}
       <button
         onClick={add}
-        className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline"
+        className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline pt-1"
       >
         <Plus className="w-3.5 h-3.5" />
         Add row
@@ -83,17 +83,19 @@ const Row = ({
   const clearFile = () => onChange({ file: undefined, value: '' });
 
   return (
-    <div className="grid grid-cols-[1fr_28px_28px] md:grid-cols-[1fr_1fr_90px_28px_28px] gap-2 items-center">
+    <div className="grid grid-cols-[1fr_1fr_90px_auto_auto] gap-2 items-center">
       <Input
         value={item.key}
         onChange={(e) => onChange({ key: e.target.value })}
         placeholder="Field name"
+        className="text-sm"
       />
       {item.type === 'text' ? (
         <Input
           value={item.value}
           onChange={(e) => onChange({ value: e.target.value })}
           placeholder="Value"
+          className="text-sm"
         />
       ) : (
         <div className="flex items-center gap-1 min-w-0">
@@ -143,20 +145,24 @@ const Row = ({
         <option value="text">Text</option>
         <option value="file">File</option>
       </select>
-      <input
-        type="checkbox"
-        checked={item.enabled}
-        onChange={(e) => onChange({ enabled: e.target.checked })}
-        className="accent-accent w-4 h-4 mx-auto"
-        aria-label="Enabled"
-      />
-      <button
+      <div className="flex justify-center">
+        <input
+          type="checkbox"
+          checked={item.enabled}
+          onChange={(e) => onChange({ enabled: e.target.checked })}
+          className="w-4 h-4 accent-[rgb(var(--accent))] cursor-pointer"
+          aria-label="Enabled"
+        />
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={onRemove}
-        className="text-muted hover:text-danger p-1"
+        className="w-8 h-8 p-0"
         aria-label="Remove row"
       >
         <Trash2 className="w-4 h-4" />
-      </button>
+      </Button>
     </div>
   );
 };

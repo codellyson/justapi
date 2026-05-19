@@ -102,6 +102,15 @@ export const URLInput = () => {
         onChange={(e) => handleInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="https://api.example.com/users"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        // Discourage Chrome's password-manager / form-fill heuristics.
+        name="quickrest-url"
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
         className={cn(
           "w-full px-3 py-1.5 text-sm border border-border rounded-md",
           "bg-bg text-primary placeholder:text-muted",

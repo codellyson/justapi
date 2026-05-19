@@ -98,9 +98,9 @@ export const ResponsePanel = () => {
       {source === 'live' ? (
         <>
           <ResponseMeta response={response} />
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             <Tabs active={activeTab} onChange={setActiveTab} canDiff={canDiff} response={response} />
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto min-h-0">
               {activeTab === 'body' && <ResponseBody response={response} />}
               {activeTab === 'headers' && <ResponseHeaders response={response} />}
               {activeTab === 'cookies' && <ResponseCookies response={response} />}

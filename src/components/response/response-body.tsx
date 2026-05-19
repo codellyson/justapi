@@ -35,8 +35,8 @@ export const ResponseBody = ({ response }: ResponseBodyProps) => {
   const isJson = typeof response.data === 'object' || (typeof bodyText === 'string' && bodyText.trim().startsWith('{'));
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="flex items-center justify-end gap-2 p-2 border-b border-border">
+    <div className="h-full flex flex-col min-h-0">
+      <div className="flex items-center justify-end gap-2 p-2 border-b border-border shrink-0">
         <Button
           variant="secondary"
           size="sm"
@@ -55,7 +55,7 @@ export const ResponseBody = ({ response }: ResponseBodyProps) => {
           )}
         </Button>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         <CodeEditor
           value={bodyText}
           language={isJson ? 'json' : 'text'}

@@ -1,43 +1,33 @@
-// Pluggable storage for share links.
-// Uses Vercel Blob when BLOB_READ_WRITE_TOKEN is set, falls back to an
-// in-memory Map for local dev. The memory map is per-instance, so on Vercel
-// without Blob configured shares break across cold starts.
-
 import 'server-only';
 
 const memory = new Map<string, string>();
-
-function hasBlobToken(): boolean {
-  return !!process.env.BLOB_READ_WRITE_TOKEN;
-}
-
 const blobPath = (id: string) => `shares/${id}.json`;
 
 export async function put(id: string, data: string): Promise<void> {
-  if (!hasBlobToken()) {
-    memory.set(id, data);
+  try {
+    const { put: blobPut } = await import('@vercel/blob');
+    await blobPut(blobPath(id), data, {
+      access: 'public',
+      addRandomSuffix: false,
+      contentType: 'application/json',
+      cacheControlMaxAge: 31536000,
+    });
     return;
+  } catch {
+    memory.set(id, data);
   }
-  const { put: blobPut } = await import('@vercel/blob');
-  await blobPut(blobPath(id), data, {
-    access: 'public',
-    addRandomSuffix: false,
-    contentType: 'application/json',
-    cacheControlMaxAge: 31536000,
-  });
 }
 
 export async function get(id: string): Promise<string | null> {
-  if (!hasBlobToken()) return memory.get(id) ?? null;
   try {
     const { head } = await import('@vercel/blob');
     const blob = await head(blobPath(id));
     const res = await fetch(blob.url);
-    if (!res.ok) return null;
-    return await res.text();
+    if (res.ok) return await res.text();
   } catch {
-    return null;
+    /* fall through to memory */
   }
+  return memory.get(id) ?? null;
 }
 
 const ALPHABET =

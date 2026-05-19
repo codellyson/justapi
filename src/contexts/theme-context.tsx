@@ -36,8 +36,8 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const MODE_KEY = "quickrest-mode";
-const THEME_KEY = "quickrest-theme";
+const MODE_KEY = "justapi-mode";
+const THEME_KEY = "justapi-theme";
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<Mode>("light");

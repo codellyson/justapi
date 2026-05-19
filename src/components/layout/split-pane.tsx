@@ -3,7 +3,7 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { cn } from '../../utils/cn';
 
-const STORAGE_PREFIX = 'quickrest-split-';
+const STORAGE_PREFIX = 'justapi-split-';
 const MIN_PCT = 20;
 const MAX_PCT = 80;
 const LG_QUERY = '(min-width: 1024px)';

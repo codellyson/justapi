@@ -27,7 +27,7 @@ const sections: TabItem<SectionId>[] = [
   { id: "history", label: "History" },
 ];
 
-const SIDEBAR_WIDTH_KEY = "quickrest-sidebar-width";
+const SIDEBAR_WIDTH_KEY = "justapi-sidebar-width";
 const SIDEBAR_DEFAULT_WIDTH = 256;
 const SIDEBAR_MIN_WIDTH = 200;
 const SIDEBAR_MAX_WIDTH = 480;

@@ -1,17 +1,17 @@
-// QuickRest API Debugger — background service worker.
+// JUSTAPI API Debugger — background service worker.
 //
 // Captures JS-initiated network traffic (fetch + XMLHttpRequest) from a
 // chosen tab by injecting interceptor scripts. No yellow banner.
 //
-// The QuickRest web app drives the UI and connects via
+// The JUSTAPI web app drives the UI and connects via
 // `externally_connectable`.
 
 /* global chrome */
 'use strict';
 
-const REG_INTERCEPTOR = 'quickrest-interceptor';
-const REG_BRIDGE = 'quickrest-interceptor-bridge';
-const STORAGE_KEY = 'quickrest-state';
+const REG_INTERCEPTOR = 'justapi-interceptor';
+const REG_BRIDGE = 'justapi-interceptor-bridge';
+const STORAGE_KEY = 'justapi-state';
 const PERSIST_DEBOUNCE_MS = 400;
 const MAX_CAPTURES = 500;
 
@@ -51,8 +51,9 @@ function schedulePersist() {
   }, PERSIST_DEBOUNCE_MS);
 }
 
-// Restore on SW boot.
-chrome.storage.session
+// Handlers must `await restored` before touching state — SW respawns
+// after idle wipe the in-memory Map until the storage read resolves.
+const restored = chrome.storage.session
   .get(STORAGE_KEY)
   .then((data) => {
     const saved = data?.[STORAGE_KEY];
@@ -72,7 +73,7 @@ chrome.storage.session
 chrome.scripting
   .getRegisteredContentScripts()
   .then(async (scripts) => {
-    const ids = scripts.map((s) => s.id).filter((id) => id.startsWith('quickrest-'));
+    const ids = scripts.map((s) => s.id).filter((id) => id.startsWith('justapi-'));
     if (ids.length > 0) {
       try {
         await chrome.scripting.unregisterContentScripts({ ids });
@@ -88,19 +89,24 @@ chrome.scripting
 // ─── External (web app) connection ─────────────────────────────────
 
 chrome.runtime.onConnectExternal.addListener((port) => {
-  if (port.name !== 'quickrest-debugger') return;
+  if (port.name !== 'justapi-debugger') return;
   webPorts.add(port);
-
-  port.postMessage({
-    type: 'state',
-    attachedTabId,
-    attachedTabTitle,
-    paused,
-    captures: [...captures.values()],
-  });
-
   port.onDisconnect.addListener(() => webPorts.delete(port));
   port.onMessage.addListener((msg) => handlePanelMessage(msg, port));
+
+  restored.then(() => {
+    try {
+      port.postMessage({
+        type: 'state',
+        attachedTabId,
+        attachedTabTitle,
+        paused,
+        captures: [...captures.values()],
+      });
+    } catch {
+      /* port closed */
+    }
+  });
 });
 
 function broadcast(msg) {
@@ -114,6 +120,7 @@ function broadcast(msg) {
 }
 
 async function handlePanelMessage(msg, port) {
+  await restored;
   switch (msg.type) {
     case 'list-tabs':
       await sendTabList(port);
@@ -263,24 +270,30 @@ async function detachCurrent() {
   schedulePersist();
 }
 
-// If the tab is closed, drop attach state.
 chrome.tabs.onRemoved.addListener((tabId) => {
-  if (tabId === attachedTabId) {
-    attachedTabId = null;
-    attachedTabTitle = '';
-    captures.clear();
-    broadcast({ type: 'detached', reason: 'tab-closed' });
-  }
+  restored.then(() => {
+    if (tabId === attachedTabId) {
+      attachedTabId = null;
+      attachedTabTitle = '';
+      captures.clear();
+      broadcast({ type: 'detached', reason: 'tab-closed' });
+      schedulePersist();
+    }
+  });
 });
 
 // ─── Capture events from interceptor-bridge.js ─────────────────────
 
 chrome.runtime.onMessage.addListener((msg, sender) => {
   if (msg?.type !== 'capture-event') return;
-  if (!sender.tab || sender.tab.id !== attachedTabId) return; // ignore other tabs
-  if (paused) return;
+  restored.then(() => {
+    if (!sender.tab || sender.tab.id !== attachedTabId) return;
+    if (paused) return;
+    handleCaptureEvent(msg.payload);
+  });
+});
 
-  const p = msg.payload;
+function handleCaptureEvent(p) {
   if (!p?.requestId) return;
 
   if (p.phase === 'start') {
@@ -342,4 +355,4 @@ chrome.runtime.onMessage.addListener((msg, sender) => {
     broadcast({ type: 'capture-update', entry });
     schedulePersist();
   }
-});
+}

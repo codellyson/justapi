@@ -25,17 +25,20 @@ export const AppLayout = () => {
 
   useExtension();
 
-  // One-shot cleanup for users who registered the old PWA service worker.
-  // Safe to remove once existing browsers have loaded the app at least once.
+  // Register the PWA service worker so the app is installable. The SW
+  // itself is intentionally inert (no caching) — the old aggressive cache-
+  // first worker caused stale-content bugs and we don't want to repeat
+  // that. When a new sw.js version ships, registering again triggers the
+  // browser's update flow.
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .getRegistrations()
-        .then((regs) => regs.forEach((r) => r.unregister()));
-    }
-    if ("caches" in window) {
-      caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
-    }
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator)) return;
+    if (process.env.NODE_ENV !== "production") return;
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .catch((err) => {
+        console.warn("[JUSTAPI] service worker registration failed:", err);
+      });
   }, []);
 
   useEffect(() => {

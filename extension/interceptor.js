@@ -1,4 +1,4 @@
-// QuickRest interceptor — runs in the target page's MAIN world.
+// JUSTAPI interceptor — runs in the target page's MAIN world.
 //
 // Patches window.fetch and XMLHttpRequest so every JS-initiated request
 // gets reported via window.postMessage. A companion ISOLATED-world bridge
@@ -10,10 +10,10 @@
 (() => {
   'use strict';
 
-  if (window.__quickrestIntercepted) return;
-  window.__quickrestIntercepted = true;
+  if (window.__justapiIntercepted) return;
+  window.__justapiIntercepted = true;
 
-  const POST_TYPE = 'quickrest-captured-event';
+  const POST_TYPE = 'justapi-captured-event';
   let nextLocal = 1;
   const genId = () => `qr-${Date.now()}-${nextLocal++}`;
 
@@ -33,7 +33,7 @@
 
   const post = (payload) => {
     try {
-      window.postMessage({ source: 'quickrest-interceptor', type: POST_TYPE, payload }, '*');
+      window.postMessage({ source: 'justapi-interceptor', type: POST_TYPE, payload }, '*');
     } catch {
       /* postMessage can throw on closed windows */
     }
@@ -253,7 +253,7 @@
 
   // Mark active so future "detach" can no-op gracefully (page must reload
   // to truly remove the patch).
-  window.__quickrestInterceptorActive = true;
+  window.__justapiInterceptorActive = true;
 
-  console.log('[QuickRest] fetch + XHR interceptor active');
+  console.log('[JUSTAPI] fetch + XHR interceptor active');
 })();

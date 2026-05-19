@@ -1,47 +1,53 @@
 import { cn } from "../../utils/cn";
 
-export type LogoVariant = "default";
+export type LogoVariant = "full" | "mark" | "wordmark" | "default";
 
 interface LogoProps {
+  /**
+   * `full` (default) — JA monogram + JUSTAPI wordmark.
+   * `mark` — JA monogram only (square; favicon / extension icon).
+   * `wordmark` — JUSTAPI text only.
+   */
   variant?: LogoVariant;
   className?: string;
-  width?: number | string;
-  height?: number | string;
 }
 
-export const Logo = ({
-  className,
-  width = "100%",
-  height = "100%",
-}: LogoProps) => {
+export const Logo = ({ variant = "full", className }: LogoProps) => {
+  const showMark = variant === "full" || variant === "default" || variant === "mark";
+  const showWordmark = variant === "full" || variant === "default" || variant === "wordmark";
+
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox="0 0 200 200"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={cn(
-        "object-contain text-primary",
-        className
+    <div className={cn("inline-flex items-center gap-2 leading-none", className)}>
+      {showMark && (
+        <svg
+          viewBox="0 0 128 128"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-full aspect-square shrink-0"
+          aria-label="JUSTAPI"
+        >
+          <rect
+            x="0"
+            y="0"
+            width="128"
+            height="128"
+            rx="28"
+            fill="rgb(var(--accent))"
+          />
+          <path
+            d="M 92 24 L 92 76 A 28 28 0 0 1 36 76 L 52 76 A 12 12 0 0 0 76 76 L 76 24 Z"
+            fill="rgb(var(--accent-text))"
+          />
+        </svg>
       )}
-    >
-      <circle
-        cx="100"
-        cy="100"
-        r="80"
-        stroke="currentColor"
-        strokeWidth="2"
-        fill="none"
-      />
-      <path
-        d="M110 50 L85 100 L100 100 L90 150 L115 100 L100 100 Z"
-        fill="currentColor"
-      />
-      <circle cx="60" cy="70" r="3" fill="currentColor" opacity="0.5" />
-      <circle cx="140" cy="70" r="3" fill="currentColor" opacity="0.5" />
-      <circle cx="60" cy="130" r="3" fill="currentColor" opacity="0.5" />
-      <circle cx="140" cy="130" r="3" fill="currentColor" opacity="0.5" />
-    </svg>
+      {showWordmark && (
+        <span
+          className="font-bold text-primary text-base"
+          style={{ letterSpacing: "-0.015em" }}
+        >
+          JUST<span className="text-accent">API</span>
+        </span>
+      )}
+    </div>
   );
 };

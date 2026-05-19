@@ -104,13 +104,15 @@ export const DebuggerPanel = () => {
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return captures;
-    return captures.filter(
-      (c) =>
-        c.url.toLowerCase().includes(q) ||
-        c.method.toLowerCase().includes(q) ||
-        String(c.status).includes(q)
-    );
+    const base = q
+      ? captures.filter(
+          (c) =>
+            c.url.toLowerCase().includes(q) ||
+            c.method.toLowerCase().includes(q) ||
+            String(c.status).includes(q)
+        )
+      : captures;
+    return [...base].reverse();
   }, [captures, filter]);
 
   const refreshTabs = () => {
@@ -187,7 +189,7 @@ export const DebuggerPanel = () => {
         <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-6">
           <Plug className="w-5 h-5 text-muted mb-2" />
           <p className="text-xs text-secondary max-w-[200px] mb-3">
-            {status === 'unknown' ? 'Looking for extension…' : 'Install the QuickRest extension and reload this tab.'}
+            {status === 'unknown' ? 'Looking for extension…' : 'Install the JUSTAPI extension and reload this tab.'}
           </p>
           {status === 'no-extension' && (
             <>

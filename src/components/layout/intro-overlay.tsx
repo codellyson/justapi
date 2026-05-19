@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Send, Activity } from 'lucide-react';
 import { useUIStore } from '../../stores/use-ui-store';
 
-const STORAGE_KEY = 'quickrest-intro-seen';
+const STORAGE_KEY = 'justapi-intro-seen';
 
 export const IntroOverlay = () => {
   const [show, setShow] = useState(false);
@@ -40,7 +40,7 @@ export const IntroOverlay = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true" />
       <div className="relative z-10 bg-bg border border-border rounded-lg shadow-lg w-full max-w-2xl p-6">
-        <h2 className="text-xl font-semibold text-primary mb-1">Welcome to QuickRest</h2>
+        <h2 className="text-xl font-semibold text-primary mb-1">Welcome to JUSTAPI</h2>
         <p className="text-sm text-secondary mb-6">Two things this app does well:</p>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -66,7 +66,7 @@ export const IntroOverlay = () => {
               <span className="font-medium text-primary">Debug</span>
             </div>
             <p className="text-xs text-secondary">
-              Capture fetch + XHR from any tab via the QuickRest extension, inspect headers and bodies, replay with one click.
+              Capture fetch + XHR from any tab via the JUSTAPI extension, inspect headers and bodies, replay with one click.
             </p>
           </button>
         </div>

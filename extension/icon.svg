@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <rect x="0" y="0" width="128" height="128" rx="28" fill="#0969da"/>
-  <text x="64" y="92" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="86" text-anchor="middle" fill="#ffffff">Q</text>
+  <!-- Bold J monogram drawn as a single closed path so it stays crisp at
+       16px. Stem (x=76→92) + outer hook (radius 28) + inner hook (radius 12). -->
+  <path
+    d="M 92 24 L 92 76 A 28 28 0 0 1 36 76 L 52 76 A 12 12 0 0 0 76 76 L 76 24 Z"
+    fill="#ffffff"
+  />
 </svg>

@@ -107,7 +107,7 @@ export const URLInput = () => {
         autoCapitalize="off"
         spellCheck={false}
         // Discourage Chrome's password-manager / form-fill heuristics.
-        name="quickrest-url"
+        name="justapi-url"
         data-1p-ignore
         data-lpignore="true"
         data-form-type="other"

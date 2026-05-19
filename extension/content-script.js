@@ -1,6 +1,6 @@
-// QuickRest extension — content script.
+// JUSTAPI extension — content script.
 //
-// Injected into QuickRest web app pages (localhost dev URLs for now).
+// Injected into JUSTAPI web app pages (localhost dev URLs for now).
 // Posts the extension ID to the page so the web app can open an
 // externally_connectable port back to the extension.
 //
@@ -12,7 +12,7 @@
 const announce = () => {
   window.postMessage(
     {
-      type: 'quickrest-extension-ready',
+      type: 'justapi-extension-ready',
       extensionId: chrome.runtime.id,
       version: chrome.runtime.getManifest().version,
     },
@@ -20,13 +20,13 @@ const announce = () => {
   );
 };
 
-console.log('[QuickRest] content script loaded, extensionId=', chrome.runtime.id);
+console.log('[JUSTAPI] content script loaded, extensionId=', chrome.runtime.id);
 announce();
 
 window.addEventListener('message', (event) => {
   if (event.source !== window) return;
-  if (event.data?.type === 'quickrest-extension-ping') {
-    console.log('[QuickRest] ping received, re-announcing');
+  if (event.data?.type === 'justapi-extension-ping') {
+    console.log('[JUSTAPI] ping received, re-announcing');
     announce();
   }
 });

@@ -260,7 +260,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                   About
                 </h3>
                 <p className="text-xs text-secondary">
-                  QuickRest — a simple REST API client
+                  JUSTAPI — a simple REST API client
                 </p>
                 <p className="text-xs text-muted mt-0.5">
                   Version 1.0.0

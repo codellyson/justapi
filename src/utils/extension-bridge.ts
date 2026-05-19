@@ -1,5 +1,5 @@
 /**
- * Bridge to the QuickRest browser extension.
+ * Bridge to the JUSTAPI browser extension.
  *
  * The extension's content script broadcasts the extension ID to the page
  * via window.postMessage. Once discovered, we open a long-lived
@@ -76,12 +76,12 @@ class ExtensionBridge {
     if (this.extensionId) return this.extensionId;
 
     return new Promise<string | null>((resolve) => {
-      console.log('[QuickRest] discovering extension…');
+      console.log('[JUSTAPI] discovering extension…');
 
       const timer = setTimeout(() => {
         window.removeEventListener('message', handler);
         console.warn(
-          '[QuickRest] extension not detected after',
+          '[JUSTAPI] extension not detected after',
           timeoutMs,
           'ms. Make sure the extension is loaded and the page URL matches `http://localhost/*` or `http://127.0.0.1/*` in its manifest.'
         );
@@ -91,17 +91,17 @@ class ExtensionBridge {
       const handler = (event: MessageEvent) => {
         if (event.source !== window) return;
         const data = event.data;
-        if (data?.type === 'quickrest-extension-ready' && typeof data.extensionId === 'string') {
+        if (data?.type === 'justapi-extension-ready' && typeof data.extensionId === 'string') {
           clearTimeout(timer);
           window.removeEventListener('message', handler);
           this.extensionId = data.extensionId;
-          console.log('[QuickRest] extension detected, id=', data.extensionId);
+          console.log('[JUSTAPI] extension detected, id=', data.extensionId);
           resolve(data.extensionId);
         }
       };
 
       window.addEventListener('message', handler);
-      window.postMessage({ type: 'quickrest-extension-ping' }, window.location.origin);
+      window.postMessage({ type: 'justapi-extension-ping' }, window.location.origin);
     });
   }
 
@@ -113,13 +113,13 @@ class ExtensionBridge {
     const runtime = (window as unknown as { chrome?: { runtime?: ChromeRuntime } }).chrome?.runtime;
     if (!runtime?.connect) {
       console.warn(
-        '[QuickRest] window.chrome.runtime.connect is unavailable. The page URL must be listed in the extension\'s `externally_connectable.matches`.'
+        '[JUSTAPI] window.chrome.runtime.connect is unavailable. The page URL must be listed in the extension\'s `externally_connectable.matches`.'
       );
       return false;
     }
 
     try {
-      const port = runtime.connect(this.extensionId, { name: 'quickrest-debugger' });
+      const port = runtime.connect(this.extensionId, { name: 'justapi-debugger' });
       port.onMessage.addListener((msg) => {
         for (const l of this.listeners) l(msg);
       });
@@ -128,11 +128,11 @@ class ExtensionBridge {
         for (const l of this.connectListeners) l(false);
       });
       this.port = port;
-      console.log('[QuickRest] connected to extension');
+      console.log('[JUSTAPI] connected to extension');
       for (const l of this.connectListeners) l(true);
       return true;
     } catch (e) {
-      console.error('[QuickRest] connect failed:', e);
+      console.error('[JUSTAPI] connect failed:', e);
       return false;
     }
   }

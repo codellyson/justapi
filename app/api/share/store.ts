@@ -7,14 +7,14 @@ import 'server-only';
 
 const memory = new Map<string, string>();
 
-function useBlob(): boolean {
+function hasBlobToken(): boolean {
   return !!process.env.BLOB_READ_WRITE_TOKEN;
 }
 
 const blobPath = (id: string) => `shares/${id}.json`;
 
 export async function put(id: string, data: string): Promise<void> {
-  if (!useBlob()) {
+  if (!hasBlobToken()) {
     memory.set(id, data);
     return;
   }
@@ -28,7 +28,7 @@ export async function put(id: string, data: string): Promise<void> {
 }
 
 export async function get(id: string): Promise<string | null> {
-  if (!useBlob()) return memory.get(id) ?? null;
+  if (!hasBlobToken()) return memory.get(id) ?? null;
   try {
     const { head } = await import('@vercel/blob');
     const blob = await head(blobPath(id));

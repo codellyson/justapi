@@ -12,8 +12,10 @@ import { IntroOverlay } from "./intro-overlay";
 import { KeyboardShortcuts } from "./keyboard-shortcuts";
 import { SplitPane } from "./split-pane";
 import { loadConfigFromUrl, applySharedConfig } from "../../utils/sharing";
+import { EXAMPLE_REQUESTS } from "../../utils/example-requests";
 import { useToastStore } from "../../stores/use-toast-store";
 import { useDebuggerStore } from "../../stores/use-debugger-store";
+import { useCollectionsStore } from "../../stores/use-collections-store";
 import { useUIStore } from "../../stores/use-ui-store";
 import { useExtension } from "../../hooks/use-extension";
 
@@ -54,6 +56,10 @@ export const AppLayout = () => {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    useCollectionsStore.getState().seedExamples(EXAMPLE_REQUESTS);
   }, []);
 
   return (

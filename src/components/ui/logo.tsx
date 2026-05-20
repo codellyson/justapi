@@ -4,9 +4,9 @@ export type LogoVariant = "full" | "mark" | "wordmark" | "default";
 
 interface LogoProps {
   /**
-   * `full` (default) — JA monogram + JUSTAPI wordmark.
+   * `full` (default) — JA monogram + JustAPI wordmark.
    * `mark` — JA monogram only (square; favicon / extension icon).
-   * `wordmark` — JUSTAPI text only.
+   * `wordmark` — JustAPI text only.
    */
   variant?: LogoVariant;
   className?: string;
@@ -24,7 +24,7 @@ export const Logo = ({ variant = "full", className }: LogoProps) => {
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
           className="h-full aspect-square shrink-0"
-          aria-label="JUSTAPI"
+          aria-label="JustAPI"
         >
           <rect
             x="0"
@@ -45,7 +45,7 @@ export const Logo = ({ variant = "full", className }: LogoProps) => {
           className="font-bold text-primary text-base"
           style={{ letterSpacing: "-0.015em" }}
         >
-          JUST<span className="text-accent">API</span>
+          Just<span className="text-accent">API</span>
         </span>
       )}
     </div>

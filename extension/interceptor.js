@@ -1,4 +1,4 @@
-// JUSTAPI interceptor — runs in the target page's MAIN world.
+// JustAPI interceptor — runs in the target page's MAIN world.
 //
 // Patches window.fetch and XMLHttpRequest so every JS-initiated request
 // gets reported via window.postMessage. A companion ISOLATED-world bridge
@@ -255,5 +255,5 @@
   // to truly remove the patch).
   window.__justapiInterceptorActive = true;
 
-  console.log('[JUSTAPI] fetch + XHR interceptor active');
+  console.log('[JustAPI] fetch + XHR interceptor active');
 })();

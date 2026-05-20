@@ -1,5 +1,5 @@
 /**
- * Bridge to the JUSTAPI browser extension.
+ * Bridge to the JustAPI browser extension.
  *
  * The extension's content script broadcasts the extension ID to the page
  * via window.postMessage. Once discovered, we open a long-lived
@@ -78,12 +78,12 @@ class ExtensionBridge {
     if (this.extensionId) return this.extensionId;
 
     return new Promise<string | null>((resolve) => {
-      console.log('[JUSTAPI] discovering extension…');
+      console.log('[JustAPI] discovering extension…');
 
       const timer = setTimeout(() => {
         window.removeEventListener('message', handler);
         console.warn(
-          '[JUSTAPI] extension not detected after',
+          '[JustAPI] extension not detected after',
           timeoutMs,
           'ms. Make sure the extension is loaded and the page URL matches `http://localhost/*` or `http://127.0.0.1/*` in its manifest.'
         );
@@ -97,7 +97,7 @@ class ExtensionBridge {
           clearTimeout(timer);
           window.removeEventListener('message', handler);
           this.extensionId = data.extensionId;
-          console.log('[JUSTAPI] extension detected, id=', data.extensionId);
+          console.log('[JustAPI] extension detected, id=', data.extensionId);
           resolve(data.extensionId);
         }
       };
@@ -115,7 +115,7 @@ class ExtensionBridge {
     const runtime = (window as unknown as { chrome?: { runtime?: ChromeRuntime } }).chrome?.runtime;
     if (!runtime?.connect) {
       console.warn(
-        '[JUSTAPI] window.chrome.runtime.connect is unavailable. The page URL must be listed in the extension\'s `externally_connectable.matches`.'
+        '[JustAPI] window.chrome.runtime.connect is unavailable. The page URL must be listed in the extension\'s `externally_connectable.matches`.'
       );
       return false;
     }
@@ -132,11 +132,11 @@ class ExtensionBridge {
       });
       this.port = port;
       this.reconnectAttempt = 0;
-      console.log('[JUSTAPI] connected to extension');
+      console.log('[JustAPI] connected to extension');
       for (const l of this.connectListeners) l(true);
       return true;
     } catch (e) {
-      console.error('[JUSTAPI] connect failed:', e);
+      console.error('[JustAPI] connect failed:', e);
       this.scheduleReconnect();
       return false;
     }

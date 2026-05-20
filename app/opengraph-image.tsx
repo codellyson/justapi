@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 
-export const alt = 'JUSTAPI — a fast, mobile-first REST API client.';
+export const alt = 'JustAPI — a fast, mobile-first REST API client.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -29,7 +29,7 @@ export default async function OGImage() {
             />
           </svg>
           <span style={{ fontSize: 36, fontWeight: 700, letterSpacing: -1 }}>
-            JUST<span style={{ color: '#2f81f7' }}>API</span>
+            Just<span style={{ color: '#2f81f7' }}>API</span>
           </span>
         </div>
 

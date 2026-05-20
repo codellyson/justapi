@@ -6,7 +6,7 @@ import { Providers } from './providers';
 import { BUILT_IN_THEMES, DEFAULT_THEME_ID } from '../src/utils/theme-plugins';
 
 const SITE_URL = 'https://justapi.kreativekorna.com';
-const TITLE = 'JUSTAPI — REST testing without the bloat';
+const TITLE = 'JustAPI — REST testing without the bloat';
 const DESCRIPTION =
   'A fast, mobile-first REST API client. Compose, send, save, and replay HTTP requests in the browser. Capture live traffic with the companion extension.';
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
-  applicationName: 'JUSTAPI',
+  applicationName: 'JustAPI',
   manifest: '/manifest.webmanifest',
   keywords: [
     'REST client',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     'HTTP client',
     'Postman alternative',
     'API debugger',
-    'JUSTAPI',
+    'JustAPI',
   ],
   authors: [{ name: 'KreativeKorna' }],
   creator: 'KreativeKorna',
@@ -38,11 +38,11 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'JUSTAPI',
+    title: 'JustAPI',
   },
   openGraph: {
     type: 'website',
-    siteName: 'JUSTAPI',
+    siteName: 'JustAPI',
     title: TITLE,
     description: DESCRIPTION,
     url: SITE_URL,

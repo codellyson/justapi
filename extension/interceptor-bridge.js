@@ -1,4 +1,4 @@
-// JUSTAPI interceptor bridge — runs in the target page's ISOLATED world.
+// JustAPI interceptor bridge — runs in the target page's ISOLATED world.
 //
 // Listens for postMessages from interceptor.js (MAIN world) and forwards
 // them to the extension's background service worker via chrome.runtime.

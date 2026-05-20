@@ -1,4 +1,4 @@
-# JUSTAPI
+# JustAPI
 
 A simple REST API client. Type a URL, pick a method, send. Save what you reuse.
 

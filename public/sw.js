@@ -1,4 +1,4 @@
-// JUSTAPI service worker.
+// JustAPI service worker.
 //
 // Intentionally minimal: this SW exists only so the app is installable as a
 // PWA on platforms (Chrome / Android) that require a registered worker for

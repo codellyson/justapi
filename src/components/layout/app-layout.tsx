@@ -39,7 +39,7 @@ export const AppLayout = () => {
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
       .catch((err) => {
-        console.warn("[JUSTAPI] service worker registration failed:", err);
+        console.warn("[JustAPI] service worker registration failed:", err);
       });
   }, []);
 

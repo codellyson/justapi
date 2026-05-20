@@ -1,9 +1,9 @@
-// JUSTAPI API Debugger — background service worker.
+// JustAPI API Debugger — background service worker.
 //
 // Captures JS-initiated network traffic (fetch + XMLHttpRequest) from a
 // chosen tab by injecting interceptor scripts. No yellow banner.
 //
-// The JUSTAPI web app drives the UI and connects via
+// The JustAPI web app drives the UI and connects via
 // `externally_connectable`.
 
 /* global chrome */

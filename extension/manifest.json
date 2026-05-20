@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "JUSTAPI — API Debugger",
+  "name": "JustAPI — API Debugger",
   "version": "0.2.0",
-  "description": "Capture fetch and XHR calls from any tab and stream them to the JUSTAPI web app for inspection and replay.",
+  "description": "Capture fetch and XHR calls from any tab and stream them to the JustAPI web app for inspection and replay.",
   "minimum_chrome_version": "114",
   "permissions": ["scripting", "tabs", "storage"],
   "host_permissions": ["<all_urls>"],
@@ -15,7 +15,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "JUSTAPI — open in your JUSTAPI tab to use",
+    "default_title": "JustAPI — open in your JustAPI tab to use",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

@@ -8,7 +8,7 @@ const jsonHeader = [
 
 const createBody = JSON.stringify(
   {
-    title: 'Hello from JUSTAPI',
+    title: 'Hello from JustAPI',
     body: 'This is a sample post body.',
     userId: 1,
   },

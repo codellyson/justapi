@@ -1,6 +1,6 @@
 {
-  "name": "JUSTAPI",
-  "short_name": "JUSTAPI",
+  "name": "JustAPI",
+  "short_name": "JustAPI",
   "description": "A simple REST API client.",
   "id": "/",
   "start_url": "/",

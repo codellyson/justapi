@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Command } from 'cmdk';
 import {
   Send,
@@ -18,6 +18,7 @@ import {
   Upload,
   FolderOpen,
   Globe,
+  Zap,
 } from 'lucide-react';
 import { useRequestStore } from '../../stores/use-request-store';
 import { useCollectionsStore } from '../../stores/use-collections-store';
@@ -27,12 +28,15 @@ import { useEnvironmentStore } from '../../stores/use-environment-store';
 import { useResponseStore } from '../../stores/use-response-store';
 import { useUIStore } from '../../stores/use-ui-store';
 import { useToastStore } from '../../stores/use-toast-store';
+import { useInlineSendStore } from '../../stores/use-inline-send-store';
 import { useTheme } from '../../contexts/theme-context';
 import { useRequest } from '../../hooks/use-request';
 import { generateShareableLink } from '../../utils/sharing';
 import { toCurl } from '../../utils/snippets';
-import type { HttpMethod } from '../../utils/http';
+import { sendRequest, type HttpMethod } from '../../utils/http';
+import { parseQuickRequest } from '../../utils/parse-quick-request';
 import { methodPillColor } from '../request/method-selector';
+import { PaletteInlineResult } from './palette-inline-result';
 import { cn } from '../../utils/cn';
 
 interface CommandPaletteProps {
@@ -45,13 +49,45 @@ const truncate = (s: string, n: number) =>
 
 export const CommandPalette = ({ open, onClose }: CommandPaletteProps) => {
   const [query, setQuery] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+  const inlineStore = useInlineSendStore();
+  const setSidebarSection = useUIStore((s) => s.setSidebarSection);
 
-  // Reset query when opening so each invocation starts fresh.
   useEffect(() => {
-    if (open) setQuery('');
+    if (open) {
+      setQuery('');
+      inlineStore.clear();
+    } else {
+      // Abort any in-flight inline send when closing.
+      abortRef.current?.abort();
+      abortRef.current = null;
+    }
+    // inlineStore is a stable zustand instance; we intentionally omit it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Esc handled by cmdk; close on outside click via overlay.
+  const quick = useMemo(() => parseQuickRequest(query), [query]);
+
+  const runQuickSend = async () => {
+    if (!quick) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    inlineStore.setPending(quick);
+    try {
+      const response = await sendRequest(
+        { method: quick.method, url: quick.url, headers: {} },
+        controller.signal
+      );
+      if (controller.signal.aborted) return;
+      inlineStore.setCurrent(quick.method, quick.url, response);
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      const message = err instanceof Error ? err.message : 'Request failed';
+      inlineStore.setError(message);
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -75,15 +111,42 @@ export const CommandPalette = ({ open, onClose }: CommandPaletteProps) => {
           autoFocus
           value={query}
           onValueChange={setQuery}
-          placeholder="Type a command, jump to a request, switch env…"
+          placeholder="Type a URL to send, or search commands…"
           className="w-full px-4 py-3 text-sm bg-transparent border-0 border-b border-border text-primary placeholder:text-muted focus:outline-none"
         />
-        <Command.List className="max-h-[60vh] overflow-auto py-1">
+        <Command.List className="max-h-[55vh] overflow-auto py-1">
+          {quick && (
+            <Command.Group heading={<GroupHeading>Quick send</GroupHeading>}>
+              <Command.Item
+                value={`__quicksend ${quick.method} ${quick.url}`}
+                onSelect={runQuickSend}
+                className="mx-1 my-0.5 px-3 py-2 rounded-md text-sm flex items-center gap-3 cursor-pointer aria-selected:bg-bg-secondary text-secondary aria-selected:text-primary"
+              >
+                <Zap className="w-3.5 h-3.5 text-accent shrink-0" />
+                <span className="flex-1 min-w-0 inline-flex items-center gap-2">
+                  <MethodPill method={quick.method} />
+                  <span className="truncate font-mono text-xs">{quick.url}</span>
+                </span>
+                <Kbd>↵</Kbd>
+              </Command.Item>
+            </Command.Group>
+          )}
           <Command.Empty className="px-4 py-6 text-xs text-muted text-center">
             No matches for &quot;{query}&quot;
           </Command.Empty>
           <PaletteSections onClose={onClose} />
         </Command.List>
+        <PaletteInlineResult
+          onDismiss={() => {
+            abortRef.current?.abort();
+            inlineStore.clear();
+          }}
+          onPromote={() => {
+            inlineStore.clear();
+            onClose();
+            setSidebarSection('collections');
+          }}
+        />
         <div className="flex items-center justify-between px-3 py-1.5 border-t border-border bg-bg-secondary text-[10px] text-muted">
           <span className="inline-flex items-center gap-3">
             <Kbd>↑↓</Kbd>

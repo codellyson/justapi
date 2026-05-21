@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRequest } from '../../hooks/use-request';
 import { useDebuggerStore } from '../../stores/use-debugger-store';
+import { useUIStore } from '../../stores/use-ui-store';
 
 const isTypingInEditor = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) return false;
@@ -11,33 +12,44 @@ const isTypingInEditor = (target: EventTarget | null): boolean => {
   return target.isContentEditable;
 };
 
-/**
- * Cmd/Ctrl+Enter sends the current request. Works from anywhere in the app
- * (including inside inputs), except when the debugger detail view has
- * focus — there's no request to send from that view.
- */
 export const KeyboardShortcuts = () => {
   const { send } = useRequest();
   const debugSelected = useDebuggerStore((s) => s.selectedRequestId);
+  const togglePalette = useUIStore((s) => s.togglePalette);
+  const setPaletteOpen = useUIStore((s) => s.setPaletteOpen);
+  const paletteOpen = useUIStore((s) => s.paletteOpen);
 
   useEffect(() => {
-    if (debugSelected) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Enter') return;
-      if (!(e.metaKey || e.ctrlKey)) return;
-      // Inside a multiline editor, plain Enter inserts a newline; Cmd/Ctrl+
-      // Enter is unambiguous so we still handle it.
-      e.preventDefault();
-      // Blur the focused element so the request store sees the latest value
-      // from any uncommitted input (e.g., URL field with pending onBlur).
-      if (isTypingInEditor(document.activeElement)) {
-        (document.activeElement as HTMLElement).blur();
+      const cmd = e.metaKey || e.ctrlKey;
+
+      if (cmd && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        togglePalette();
+        return;
       }
-      send();
+
+      if (e.key === 'Escape' && paletteOpen) {
+        e.preventDefault();
+        setPaletteOpen(false);
+        return;
+      }
+
+      // Cmd+Enter sends the current request, except when palette is open
+      // (cmdk handles Enter for item selection) or when the debug detail
+      // is in focus (no request to send from that view).
+      if (cmd && e.key === 'Enter') {
+        if (paletteOpen || debugSelected) return;
+        e.preventDefault();
+        if (isTypingInEditor(document.activeElement)) {
+          (document.activeElement as HTMLElement).blur();
+        }
+        send();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [send, debugSelected]);
+  }, [send, debugSelected, togglePalette, setPaletteOpen, paletteOpen]);
 
   return null;
 };

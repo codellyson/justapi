@@ -10,6 +10,7 @@ import { ThemeToggle } from "../ui/theme-toggle";
 import { DebuggerDetail } from "../debugger/debugger-detail";
 import { IntroOverlay } from "./intro-overlay";
 import { KeyboardShortcuts } from "./keyboard-shortcuts";
+import { CommandPalette } from "./command-palette";
 import { SplitPane } from "./split-pane";
 import { loadConfigFromUrl, applySharedConfig } from "../../utils/sharing";
 import { EXAMPLE_REQUESTS } from "../../utils/example-requests";
@@ -24,6 +25,8 @@ export const AppLayout = () => {
   const debugSelected = useDebuggerStore((s) => s.selectedRequestId);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const setSidebarOpen = useUIStore((s) => s.setSidebarOpen);
+  const paletteOpen = useUIStore((s) => s.paletteOpen);
+  const setPaletteOpen = useUIStore((s) => s.setPaletteOpen);
 
   useExtension();
 
@@ -86,6 +89,7 @@ export const AppLayout = () => {
       <ThemeToggle />
       <IntroOverlay />
       <KeyboardShortcuts />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 };

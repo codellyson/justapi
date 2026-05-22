@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { AppLayout } from '@/src/components/layout/app-layout';
+import { Workspace } from "@/src/v1/components/workspace";
 
 export default function Home() {
-  return <AppLayout />;
+  return <Workspace />;
 }

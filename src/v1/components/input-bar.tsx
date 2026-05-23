@@ -4,8 +4,10 @@ import { useEffect, useMemo, useRef } from "react";
 import type { HttpMethod } from "../../utils/http";
 import { useDraftStore } from "../use-draft-store";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
+import { useToastStore } from "../../stores/use-toast-store";
 import { useV1Send } from "../use-v1-send";
 import { parseSlash } from "../slash-commands";
+import { smartParse } from "../parse-curl";
 import { MethodPill } from "./method-pill";
 import { Chip } from "./chip";
 
@@ -33,11 +35,13 @@ export const InputBar = () => {
   const bodyType = useDraftStore((s) => s.bodyType);
   const body = useDraftStore((s) => s.body);
   const authType = useDraftStore((s) => s.authType);
+  const headers = useDraftStore((s) => s.headers);
   const openPopovers = useDraftStore((s) => s.openPopovers);
   const setMethod = useDraftStore((s) => s.setMethod);
   const setUrl = useDraftStore((s) => s.setUrl);
   const togglePopover = useDraftStore((s) => s.togglePopover);
   const closeAllPopovers = useDraftStore((s) => s.closeAllPopovers);
+  const fillFrom = useDraftStore((s) => s.fillFrom);
 
   const env = useEnvironmentStore((s) =>
     s.environments.find((e) => e.id === s.activeEnvironmentId)
@@ -53,6 +57,39 @@ export const InputBar = () => {
   // Slash commands still execute on Enter; we just don't surface a dropdown
   // while typing so the input stays quiet.
   const slash = useMemo(() => parseSlash(url), [url]);
+
+  const onPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (!text) return;
+    const parsed = smartParse(text);
+    if (!parsed) return;
+    e.preventDefault();
+    fillFrom({
+      method: parsed.method,
+      url: parsed.url,
+      body: parsed.body,
+      bodyType: parsed.bodyType,
+      authType: parsed.authType,
+      authConfig: parsed.authConfig,
+      headers: parsed.headers,
+    });
+    const headerCount = Object.keys(parsed.headers).length;
+    const lower = text.trim().toLowerCase();
+    const isCurl = lower.startsWith("curl") || lower.startsWith("$ curl");
+    const isDevtools = /request\s+url/i.test(text);
+    const label = isCurl
+      ? "Parsed cURL"
+      : isDevtools
+      ? "Parsed DevTools paste"
+      : "Parsed request";
+    const bits = [parsed.method];
+    if (headerCount > 0) bits.push(`${headerCount} header${headerCount === 1 ? "" : "s"}`);
+    if (parsed.body) bits.push("body");
+    if (parsed.authType !== "none") bits.push(parsed.authType);
+    useToastStore
+      .getState()
+      .showToast("info", `${label} · ${bits.join(" · ")}`);
+  };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -98,7 +135,8 @@ export const InputBar = () => {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="https://api.example.com/...  or  /command"
+          onPaste={onPaste}
+          placeholder="https://api.example.com/...  or  paste cURL  or  /command"
           spellCheck={false}
           autoComplete="off"
           className="flex-1 bg-transparent !outline-none focus:!outline-none focus-visible:!outline-none font-mono text-[13px] placeholder:text-muted"
@@ -118,6 +156,16 @@ export const InputBar = () => {
           value={authType}
           active={openPopovers.includes("auth")}
           onClick={() => togglePopover("auth")}
+        />
+        <Chip
+          label="HEADERS"
+          value={
+            Object.keys(headers).length > 0
+              ? String(Object.keys(headers).length)
+              : "none"
+          }
+          active={openPopovers.includes("headers")}
+          onClick={() => togglePopover("headers")}
         />
         <Chip
           label="ENV"

@@ -7,10 +7,9 @@ import { useStackStore } from "../use-stack-store";
 import { useDraftStore } from "../use-draft-store";
 import { computeDrift, formatSize } from "../drift";
 import { hostAccent } from "../host";
-import { CardBody } from "./card-body";
-import { SkeletonBody } from "./skeleton-body";
 import { DriftLine } from "./drift-line";
 import { MethodPill } from "./method-pill";
+import { ResultTabs } from "./result-tabs";
 import { StatusBadge } from "../../components/ui/status-badge";
 
 interface SheetProps {
@@ -127,12 +126,8 @@ export const Sheet = ({ card, open, onOpenChange }: SheetProps) => {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto">
-            {card.pending ? (
-              <SkeletonBody />
-            ) : r ? (
-              <CardBody response={r} />
-            ) : null}
+          <div className="flex-1 min-h-0">
+            <ResultTabs card={card} />
           </div>
         </Drawer.Content>
       </Drawer.Portal>

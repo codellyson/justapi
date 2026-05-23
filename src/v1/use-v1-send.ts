@@ -5,6 +5,7 @@ import { replaceVariables } from "../utils/variables";
 import { useEnvironmentStore } from "../stores/use-environment-store";
 import { useDraftStore } from "./use-draft-store";
 import { useStackStore } from "./use-stack-store";
+import { useWorkspaceStore } from "./use-workspace-store";
 import type { CardRequestSnapshot } from "./types";
 
 const bodySummary = (
@@ -91,7 +92,9 @@ export const useV1Send = () => {
     };
 
     const stack = useStackStore.getState();
+    const workspaceId = useWorkspaceStore.getState().activeWorkspaceId;
     const cardId = stack.spawn({
+      workspaceId,
       request: snapshot,
       env: env ? { id: env.id, name: env.name } : null,
       auth: { type: d.authType, summary: authSummary(d.authType) },

@@ -30,6 +30,7 @@ export interface CardRequestSnapshot {
 
 export interface Card {
   id: string;
+  workspaceId: string;
   createdAt: number;
   method: HttpMethod;
   url: string;

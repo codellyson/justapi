@@ -3,11 +3,13 @@ import { persist } from "zustand/middleware";
 import type { Card, CardRequestSnapshot } from "./types";
 import type { HttpResponse } from "../utils/http";
 import { extractHost } from "./host";
+import { DEFAULT_WORKSPACE_ID, useWorkspaceStore } from "./use-workspace-store";
 
 const id = () =>
   `c_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 interface SpawnInput {
+  workspaceId: string;
   request: CardRequestSnapshot;
   env: Card["env"];
   auth: Card["auth"];
@@ -15,37 +17,34 @@ interface SpawnInput {
 }
 
 interface StackState {
+  /** All cards across all workspaces. Selectors filter by workspaceId. */
   cards: Card[];
-  /** Which card the drawer is currently displaying. null = drawer closed.
-   *  Closing the drawer does NOT remove the card from the stack — it stays
-   *  visible in the peek rail. */
-  displayedCardId: string | null;
+  /** Per-workspace drawer state. null = drawer closed for that workspace. */
+  displayedCardIdByWorkspace: Record<string, string | null>;
+
   spawn: (input: SpawnInput) => string;
   resolve: (cardId: string, response: HttpResponse) => void;
   fail: (cardId: string, error: string) => void;
-  /** Open the drawer on the given card (must already be in stack). */
-  setDisplayed: (cardId: string | null) => void;
-  /** Close the drawer without touching the stack. */
-  closeDrawer: () => void;
-  /** Remove a card from the visible rail (palette still sees it). */
+  setDisplayed: (workspaceId: string, cardId: string | null) => void;
+  closeDrawer: (workspaceId: string) => void;
   dismiss: (cardId: string) => void;
-  /** Push a card back onto the visible stack (e.g. when picked from palette). */
   restoreToStack: (cardId: string) => void;
-  archiveAll: () => void;
+  archiveAll: (workspaceId: string) => void;
   unarchive: (cardId: string) => void;
   remove: (cardId: string) => void;
-  reset: () => void;
+  resetWorkspace: (workspaceId: string) => void;
 }
 
 export const useStackStore = create<StackState>()(
   persist(
     (set) => ({
       cards: [],
-      displayedCardId: null,
+      displayedCardIdByWorkspace: {},
       spawn: (input) => {
         const cardId = id();
         const card: Card = {
           id: cardId,
+          workspaceId: input.workspaceId,
           createdAt: Date.now(),
           method: input.request.method,
           url: input.request.url,
@@ -63,7 +62,10 @@ export const useStackStore = create<StackState>()(
         };
         set((s) => ({
           cards: [card, ...s.cards],
-          displayedCardId: cardId,
+          displayedCardIdByWorkspace: {
+            ...s.displayedCardIdByWorkspace,
+            [input.workspaceId]: cardId,
+          },
         }));
         return cardId;
       },
@@ -81,30 +83,54 @@ export const useStackStore = create<StackState>()(
             c.id === cardId ? { ...c, pending: false, error } : c
           ),
         })),
-      setDisplayed: (cardId) => set({ displayedCardId: cardId }),
-      closeDrawer: () => set({ displayedCardId: null }),
-      dismiss: (cardId) =>
+      setDisplayed: (workspaceId, cardId) =>
         set((s) => ({
-          cards: s.cards.map((c) =>
-            c.id === cardId ? { ...c, inStack: false } : c
-          ),
-          displayedCardId:
-            s.displayedCardId === cardId ? null : s.displayedCardId,
+          displayedCardIdByWorkspace: {
+            ...s.displayedCardIdByWorkspace,
+            [workspaceId]: cardId,
+          },
         })),
+      closeDrawer: (workspaceId) =>
+        set((s) => ({
+          displayedCardIdByWorkspace: {
+            ...s.displayedCardIdByWorkspace,
+            [workspaceId]: null,
+          },
+        })),
+      dismiss: (cardId) =>
+        set((s) => {
+          const target = s.cards.find((c) => c.id === cardId);
+          const nextDisplayed = { ...s.displayedCardIdByWorkspace };
+          if (
+            target &&
+            nextDisplayed[target.workspaceId] === cardId
+          ) {
+            nextDisplayed[target.workspaceId] = null;
+          }
+          return {
+            cards: s.cards.map((c) =>
+              c.id === cardId ? { ...c, inStack: false } : c
+            ),
+            displayedCardIdByWorkspace: nextDisplayed,
+          };
+        }),
       restoreToStack: (cardId) =>
         set((s) => ({
           cards: s.cards.map((c) =>
             c.id === cardId ? { ...c, inStack: true, archived: false } : c
           ),
         })),
-      archiveAll: () =>
+      archiveAll: (workspaceId) =>
         set((s) => ({
-          cards: s.cards.map((c) => ({
-            ...c,
-            archived: true,
-            inStack: false,
-          })),
-          displayedCardId: null,
+          cards: s.cards.map((c) =>
+            c.workspaceId === workspaceId
+              ? { ...c, archived: true, inStack: false }
+              : c
+          ),
+          displayedCardIdByWorkspace: {
+            ...s.displayedCardIdByWorkspace,
+            [workspaceId]: null,
+          },
         })),
       unarchive: (cardId) =>
         set((s) => ({
@@ -113,37 +139,87 @@ export const useStackStore = create<StackState>()(
           ),
         })),
       remove: (cardId) =>
+        set((s) => {
+          const target = s.cards.find((c) => c.id === cardId);
+          const nextDisplayed = { ...s.displayedCardIdByWorkspace };
+          if (
+            target &&
+            nextDisplayed[target.workspaceId] === cardId
+          ) {
+            nextDisplayed[target.workspaceId] = null;
+          }
+          return {
+            cards: s.cards.filter((c) => c.id !== cardId),
+            displayedCardIdByWorkspace: nextDisplayed,
+          };
+        }),
+      resetWorkspace: (workspaceId) =>
         set((s) => ({
-          cards: s.cards.filter((c) => c.id !== cardId),
-          displayedCardId:
-            s.displayedCardId === cardId ? null : s.displayedCardId,
+          cards: s.cards.filter((c) => c.workspaceId !== workspaceId),
+          displayedCardIdByWorkspace: {
+            ...s.displayedCardIdByWorkspace,
+            [workspaceId]: null,
+          },
         })),
-      reset: () => set({ cards: [], displayedCardId: null }),
     }),
     {
       name: "justapi-v1-stack",
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
         const p = persisted as
-          | { cards?: Card[]; displayedCardId?: string | null }
+          | {
+              cards?: Card[];
+              displayedCardId?: string | null;
+              displayedCardIdByWorkspace?: Record<string, string | null>;
+            }
           | undefined;
-        if (!p) return p as unknown as StackState;
-        let cards = p.cards;
-        if (version < 2 && cards) {
+        if (!p) return { cards: [], displayedCardIdByWorkspace: {} } as unknown as StackState;
+
+        let cards = p.cards ?? [];
+        if (version < 2) {
           cards = cards.map((c) => ({
             ...c,
             inStack: c.inStack ?? !c.archived,
           }));
         }
+        if (version < 4) {
+          // Tag legacy cards with the Default workspace.
+          cards = cards.map((c) => ({
+            ...c,
+            workspaceId: c.workspaceId ?? DEFAULT_WORKSPACE_ID,
+          }));
+        }
+
+        let displayedMap: Record<string, string | null>;
+        if (version < 4) {
+          displayedMap = {
+            [DEFAULT_WORKSPACE_ID]: p.displayedCardId ?? null,
+          };
+        } else {
+          displayedMap = p.displayedCardIdByWorkspace ?? {};
+        }
+
         return {
-          ...p,
-          cards: cards ?? [],
-          displayedCardId: p.displayedCardId ?? null,
-        } as StackState;
+          cards,
+          displayedCardIdByWorkspace: displayedMap,
+        } as unknown as StackState;
       },
     }
   )
 );
+
+/** Read helpers scoped to the active workspace. */
+export const useActiveWorkspaceCards = (): Card[] => {
+  const active = useWorkspaceStore((s) => s.activeWorkspaceId);
+  return useStackStore((s) =>
+    s.cards.filter((c) => c.workspaceId === active)
+  );
+};
+
+export const useActiveDisplayedCardId = (): string | null => {
+  const active = useWorkspaceStore((s) => s.activeWorkspaceId);
+  return useStackStore((s) => s.displayedCardIdByWorkspace[active] ?? null);
+};
 
 export const findPriorSameUrl = (
   cards: Card[],

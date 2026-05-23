@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStackStore } from "../use-stack-store";
 import { useTemplatesStore } from "../use-templates-store";
+import { Trash2 } from "lucide-react";
 import { useDraftStore } from "../use-draft-store";
 import { SLASH_COMMANDS } from "../slash-commands";
 import { MethodPill } from "./method-pill";
@@ -53,7 +54,9 @@ export const Palette = ({ open, onClose }: PaletteProps) => {
   const [query, setQuery] = useState("");
   const [focusedIdx, setFocusedIdx] = useState(0);
   const cards = useStackStore((s) => s.cards);
+  const removeCard = useStackStore((s) => s.remove);
   const templates = useTemplatesStore((s) => s.templates);
+  const removeTemplate = useTemplatesStore((s) => s.remove);
   const fillFrom = useDraftStore((s) => s.fillFrom);
 
   useEffect(() => {
@@ -154,61 +157,86 @@ export const Palette = ({ open, onClose }: PaletteProps) => {
           )}
           {rows.map((row, i) => {
             const active = i === focusedIdx;
+            const key =
+              row.kind === "recent"
+                ? row.card.id
+                : row.kind === "template"
+                ? row.template.id
+                : row.command.name;
+            const deletable = row.kind !== "command";
             return (
-              <button
-                key={
-                  row.kind === "recent"
-                    ? row.card.id
-                    : row.kind === "template"
-                    ? row.template.id
-                    : row.command.name
-                }
-                type="button"
+              <div
+                key={key}
                 onMouseEnter={() => setFocusedIdx(i)}
-                onClick={() => pick(row)}
-                className={`w-full flex items-center gap-2 px-4 py-1.5 text-left ${
+                className={`group flex items-center w-full ${
                   active ? "bg-bg-secondary" : "hover:bg-bg-secondary/60"
                 }`}
               >
-                {row.kind === "recent" && (
-                  <>
-                    <span className="text-[10px] uppercase text-muted w-16 font-mono">
-                      recent
-                    </span>
-                    <MethodPill method={row.card.method} />
-                    <span className="font-mono text-[12px] text-primary truncate flex-1">
-                      {row.card.url}
-                    </span>
-                  </>
+                <button
+                  type="button"
+                  onClick={() => pick(row)}
+                  className="flex items-center gap-2 px-4 py-1.5 text-left flex-1 min-w-0"
+                >
+                  {row.kind === "recent" && (
+                    <>
+                      <span className="text-[10px] uppercase text-muted w-16 font-mono">
+                        recent
+                      </span>
+                      <MethodPill method={row.card.method} />
+                      <span className="font-mono text-[12px] text-primary truncate flex-1">
+                        {row.card.url}
+                      </span>
+                    </>
+                  )}
+                  {row.kind === "template" && (
+                    <>
+                      <span className="text-[10px] uppercase text-muted w-16 font-mono">
+                        saved
+                      </span>
+                      <MethodPill method={row.template.method} />
+                      <span className="text-[12px] text-primary truncate flex-1">
+                        {row.template.name}
+                      </span>
+                      <span className="font-mono text-[11px] text-muted truncate max-w-[50%]">
+                        {row.template.url}
+                      </span>
+                    </>
+                  )}
+                  {row.kind === "command" && (
+                    <>
+                      <span className="text-[10px] uppercase text-muted w-16 font-mono">
+                        command
+                      </span>
+                      <span className="font-mono text-[12px] text-accent">
+                        {row.command.name}
+                      </span>
+                      <span className="text-[11px] text-secondary truncate flex-1">
+                        {row.command.hint}
+                      </span>
+                    </>
+                  )}
+                </button>
+                {deletable && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const label =
+                        row.kind === "recent"
+                          ? "this request"
+                          : `template "${row.template.name}"`;
+                      if (!confirm(`Delete ${label}?`)) return;
+                      if (row.kind === "recent") removeCard(row.card.id);
+                      else removeTemplate(row.template.id);
+                    }}
+                    className="px-3 py-1.5 text-muted hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 )}
-                {row.kind === "template" && (
-                  <>
-                    <span className="text-[10px] uppercase text-muted w-16 font-mono">
-                      saved
-                    </span>
-                    <MethodPill method={row.template.method} />
-                    <span className="text-[12px] text-primary truncate flex-1">
-                      {row.template.name}
-                    </span>
-                    <span className="font-mono text-[11px] text-muted truncate max-w-[50%]">
-                      {row.template.url}
-                    </span>
-                  </>
-                )}
-                {row.kind === "command" && (
-                  <>
-                    <span className="text-[10px] uppercase text-muted w-16 font-mono">
-                      command
-                    </span>
-                    <span className="font-mono text-[12px] text-accent">
-                      {row.command.name}
-                    </span>
-                    <span className="text-[11px] text-secondary truncate flex-1">
-                      {row.command.hint}
-                    </span>
-                  </>
-                )}
-              </button>
+              </div>
             );
           })}
         </div>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useStackStore } from "../use-stack-store";
+import { useStackStore, useActiveDisplayedCardId } from "../use-stack-store";
+import { useWorkspaceStore } from "../use-workspace-store";
 import { useV1Keyboard } from "../use-keyboard";
 import { useToastStore } from "../../stores/use-toast-store";
 import { ToastContainer } from "../../components/ui/toast";
@@ -12,14 +13,22 @@ import { Palette } from "./palette";
 import { CursorDemo } from "./cursor-demo";
 import { Sheet } from "./sheet";
 import { PeekRail } from "./peek-rail";
+import { WorkspaceTabs } from "./workspace-tabs";
+import { HeadersDrawer } from "./headers-drawer";
+import { BodyDrawer } from "./body-drawer";
 
 export const Workspace = () => {
-  const cards = useStackStore((s) => s.cards);
-  const displayedCardId = useStackStore((s) => s.displayedCardId);
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const allCards = useStackStore((s) => s.cards);
+  const displayedCardId = useActiveDisplayedCardId();
   const closeDrawer = useStackStore((s) => s.closeDrawer);
   const displayedCard =
-    cards.find((c) => c.id === displayedCardId) ?? null;
-  const hasInStack = cards.some((c) => c.inStack && !c.archived);
+    allCards.find(
+      (c) => c.id === displayedCardId && c.workspaceId === activeWorkspaceId
+    ) ?? null;
+  const hasInStack = allCards.some(
+    (c) => c.workspaceId === activeWorkspaceId && c.inStack && !c.archived
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const toasts = useToastStore((s) => s.toasts);
   const removeToast = useToastStore((s) => s.removeToast);
@@ -35,6 +44,7 @@ export const Workspace = () => {
     >
       <div className="absolute inset-0 flex flex-col items-stretch justify-center">
         <InputBar />
+        <WorkspaceTabs />
         {!hasInStack && <CursorDemo />}
         <PopoverStack />
       </div>
@@ -44,12 +54,15 @@ export const Workspace = () => {
           card={displayedCard}
           open={drawerOpen}
           onOpenChange={(o) => {
-            if (!o) closeDrawer();
+            if (!o) closeDrawer(activeWorkspaceId);
           }}
         />
       )}
 
-      {hasInStack && <PeekRail />}
+      <HeadersDrawer />
+      <BodyDrawer />
+
+      {hasInStack && <PeekRail onShowMore={() => setPaletteOpen(true)} />}
 
       <Palette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ToastContainer toasts={toasts} onClose={removeToast} />

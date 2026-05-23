@@ -1,6 +1,7 @@
 import { useDraftStore } from "./use-draft-store";
 import { useStackStore } from "./use-stack-store";
 import { useTemplatesStore } from "./use-templates-store";
+import { useWorkspaceStore } from "./use-workspace-store";
 import { useToastStore } from "../stores/use-toast-store";
 import { useRequestStore } from "../stores/use-request-store";
 import { useEnvironmentStore } from "../stores/use-environment-store";
@@ -167,9 +168,34 @@ export const SLASH_COMMANDS: SlashCommand[] = [
     name: "/clear",
     hint: "archive entire stack",
     run: () => {
-      useStackStore.getState().archiveAll();
+      const workspaceId = useWorkspaceStore.getState().activeWorkspaceId;
+      useStackStore.getState().archiveAll(workspaceId);
       useDraftStore.getState().setUrl("");
       toast("Stack archived");
+    },
+  },
+  {
+    name: "/delete",
+    hint: "permanently delete the request currently in the drawer",
+    run: () => {
+      const stack = useStackStore.getState();
+      const workspaceId = useWorkspaceStore.getState().activeWorkspaceId;
+      const id = stack.displayedCardIdByWorkspace[workspaceId];
+      if (!id) {
+        toast("No request on stage to delete", "error");
+        return;
+      }
+      const card = stack.cards.find((c) => c.id === id);
+      if (!card) {
+        toast("Card not found", "error");
+        return;
+      }
+      if (typeof window !== "undefined" && !window.confirm("Delete this request?")) {
+        return;
+      }
+      stack.remove(id);
+      useDraftStore.getState().setUrl("");
+      toast("Request deleted");
     },
   },
   {

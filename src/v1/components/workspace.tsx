@@ -77,13 +77,15 @@ export const Workspace = () => {
       data-vaul-drawer-wrapper
       className="relative h-[100dvh] w-full overflow-hidden bg-bg text-primary"
     >
-      <div className="absolute inset-0 flex flex-col items-stretch justify-center">
-        <InputBar />
-        {!hasInStack && <CursorDemo />}
-        <WorkspaceTabs />
-        <ExamplePills />
-        <PopoverStack />
-      </div>
+      {!drawerOpen && (
+        <div className="absolute inset-0 flex flex-col items-stretch justify-center">
+          <InputBar />
+          {!hasInStack && <CursorDemo />}
+          <WorkspaceTabs />
+          <ExamplePills />
+          <PopoverStack />
+        </div>
+      )}
 
       {displayedCard && (
         <Sheet

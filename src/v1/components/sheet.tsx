@@ -1,16 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Drawer } from "vaul";
 import { Share2, Check } from "lucide-react";
 import type { Card } from "../types";
-import { useStackStore } from "../use-stack-store";
 import { useDraftStore } from "../use-draft-store";
 import { useToastStore } from "../../stores/use-toast-store";
-import { computeDrift, formatSize } from "../drift";
+import { formatSize } from "../drift";
 import { hostAccent } from "../host";
 import { shareCard } from "../share";
-import { DriftLine } from "./drift-line";
 import { MethodPill } from "./method-pill";
 import { ResultTabs } from "./result-tabs";
 import { StatusBadge } from "../../components/ui/status-badge";
@@ -22,23 +20,7 @@ interface SheetProps {
 }
 
 export const Sheet = ({ card, open, onOpenChange }: SheetProps) => {
-  const allCards = useStackStore((s) => s.cards);
   const fillFrom = useDraftStore((s) => s.fillFrom);
-
-  const drift = useMemo(() => {
-    if (!card.response) return null;
-    const prior = allCards.find(
-      (c) =>
-        c.id !== card.id &&
-        !c.archived &&
-        c.method === card.method &&
-        c.url === card.url &&
-        c.response
-    );
-    if (!prior?.response) return null;
-    return computeDrift(prior.response, card.response);
-  }, [allCards, card]);
-
   const accent = hostAccent(card.host);
   const r = card.response;
 
@@ -154,14 +136,8 @@ export const Sheet = ({ card, open, onOpenChange }: SheetProps) => {
             )}
           </div>
 
-          {drift && (
-            <div className="px-3 pt-2 shrink-0">
-              <DriftLine drift={drift} />
-            </div>
-          )}
-
           <div className="flex-1 min-h-0">
-            <ResultTabs card={card} />
+            <ResultTabs key={card.id} card={card} />
           </div>
         </Drawer.Content>
       </Drawer.Portal>

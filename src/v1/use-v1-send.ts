@@ -104,11 +104,6 @@ export const useV1Send = () => {
         : null,
     });
 
-    // Clear the URL field once the request is in-flight so the user can
-    // start typing the next one. Body/auth/headers stick around as
-    // working configuration.
-    useDraftStore.getState().setUrl("");
-
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;

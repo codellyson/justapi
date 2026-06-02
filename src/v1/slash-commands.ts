@@ -156,23 +156,29 @@ export const SLASH_COMMANDS: SlashCommand[] = [
         return;
       }
       const sharing = await import("../utils/sharing");
-      const url = await sharing.generateShareableLink({
-        method: d.method,
-        url: d.url,
-        params: [],
-        headers: Object.entries(d.headers).map(([k, v], i) => ({
-          id: String(i + 1),
-          key: k,
-          value: v,
-          enabled: true,
-        })),
-        bodyType: d.bodyType,
-        body: d.body,
-        authType: d.authType,
-        authConfig: d.authConfig,
-      });
+      let url: string;
+      try {
+        url = await sharing.generateShareableLink({
+          method: d.method,
+          url: d.url,
+          params: [],
+          headers: Object.entries(d.headers).map(([k, v], i) => ({
+            id: String(i + 1),
+            key: k,
+            value: v,
+            enabled: true,
+          })),
+          bodyType: d.bodyType,
+          body: d.body,
+          authType: d.authType,
+          authConfig: d.authConfig,
+        });
+      } catch {
+        toast("Couldn't create share link", "error");
+        return;
+      }
       const ok = await copyToClipboard(url);
-      toast(ok ? "Share link copied" : "Failed to create link", ok ? "info" : "error");
+      toast(ok ? "Share link copied" : "Failed to copy link", ok ? "info" : "error");
     },
   },
   {

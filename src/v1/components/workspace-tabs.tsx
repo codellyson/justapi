@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useStackStore } from "../use-stack-store";
 import { useWorkspaceStore, accentForHue } from "../use-workspace-store";
 import { Plus, X, Pencil } from "lucide-react";
@@ -28,6 +28,14 @@ export const WorkspaceTabs = () => {
     }
   }, [renamingId]);
 
+  // Active workspace floats to the front so users always see the
+  // currently-focused context first.
+  const ordered = useMemo(() => {
+    const active = workspaces.find((w) => w.id === activeId);
+    if (!active) return workspaces;
+    return [active, ...workspaces.filter((w) => w.id !== activeId)];
+  }, [workspaces, activeId]);
+
   const countFor = (workspaceId: string) =>
     allCards.filter(
       (c) => c.workspaceId === workspaceId && c.inStack && !c.archived
@@ -42,18 +50,21 @@ export const WorkspaceTabs = () => {
   return (
     <div className="w-full max-w-3xl mx-auto px-4 mt-2">
       <div className="flex items-center gap-1.5 flex-wrap">
-        {workspaces.map((ws) => {
+        {ordered.map((ws) => {
           const active = ws.id === activeId;
           const count = countFor(ws.id);
           const isRenaming = renamingId === ws.id;
           const accent = accentForHue(ws.hue);
+          const activeFill = `hsl(${ws.hue} 60% 55% / 0.22)`;
           return (
             <div
               key={ws.id}
-              className="group inline-flex items-center gap-1 rounded-md border text-[11px] transition-colors pl-1.5"
+              className={`group inline-flex items-center gap-1 rounded-md border text-[11px] transition-colors pl-1.5 ${
+                active ? "shadow-[inset_0_0_0_1px_rgb(255_255_255/0.04)]" : ""
+              }`}
               style={{
                 borderColor: active ? accent.border : "rgb(var(--border) / 0.6)",
-                background: active ? accent.soft : "rgb(var(--bg-secondary))",
+                background: active ? activeFill : "rgb(var(--bg-secondary))",
               }}
             >
               <button

@@ -68,21 +68,27 @@ export const useV1Keyboard = ({ openPalette }: KeyboardOptions) => {
         if (!d.url.trim()) return;
         e.preventDefault();
         const sharing = await import("../utils/sharing");
-        const url = await sharing.generateShareableLink({
-          method: d.method,
-          url: d.url,
-          params: [],
-          headers: Object.entries(d.headers).map(([k, v], i) => ({
-            id: String(i + 1),
-            key: k,
-            value: v,
-            enabled: true,
-          })),
-          bodyType: d.bodyType,
-          body: d.body,
-          authType: d.authType,
-          authConfig: d.authConfig,
-        });
+        let url: string;
+        try {
+          url = await sharing.generateShareableLink({
+            method: d.method,
+            url: d.url,
+            params: [],
+            headers: Object.entries(d.headers).map(([k, v], i) => ({
+              id: String(i + 1),
+              key: k,
+              value: v,
+              enabled: true,
+            })),
+            bodyType: d.bodyType,
+            body: d.body,
+            authType: d.authType,
+            authConfig: d.authConfig,
+          });
+        } catch {
+          toast("Couldn't create share link");
+          return;
+        }
         try {
           await navigator.clipboard.writeText(url);
           toast("Share link copied");

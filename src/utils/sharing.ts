@@ -71,22 +71,7 @@ const expand = (wire: CompactWire): ShareableRequestConfig => ({
   authConfig: wire.ac || {},
 });
 
-const toBase64Url = (str: string): string => {
-  const b64 = typeof btoa === 'function'
-    ? btoa(unescape(encodeURIComponent(str)))
-    : Buffer.from(str, 'utf-8').toString('base64');
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-};
-
-const fromBase64Url = (str: string): string => {
-  const b64 = str.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4);
-  return typeof atob === 'function'
-    ? decodeURIComponent(escape(atob(padded)))
-    : Buffer.from(padded, 'base64').toString('utf-8');
-};
-
-function currentWire(): { config: ShareableRequestConfig; wire: CompactWire } {
+function currentWire(): CompactWire {
   const state = useRequestStore.getState();
   const config: ShareableRequestConfig = {
     method: state.method,
@@ -98,41 +83,33 @@ function currentWire(): { config: ShareableRequestConfig; wire: CompactWire } {
     authType: state.authType,
     authConfig: state.authType === 'none' ? state.authConfig : {},
   };
-  return { config, wire: compact(config) };
-}
-
-function fragmentLink(wire: CompactWire): string {
-  return `${window.location.origin}/playground#s=${toBase64Url(JSON.stringify(wire))}`;
+  return compact(config);
 }
 
 /**
- * Tries the share API first for a short `?s=ID` URL on the playground.
- * Falls back to a self-contained fragment URL on any failure (offline,
- * API down, no storage configured), so the user always gets a working
- * link.
+ * POST the request to /api/share and return a short `/playground?s=ID`
+ * link. Throws if the storage backend is unavailable — callers should
+ * catch and surface the failure to the user.
  *
  * Accepts an optional `config` so any caller — not just the legacy
- * draft store — can produce a share link. With no argument it reads the
- * current legacy draft as before, preserving existing call sites.
+ * draft store — can produce a share link. With no argument it reads
+ * the current legacy draft.
  */
 export const generateShareableLink = async (
   config?: ShareableRequestConfig
 ): Promise<string> => {
-  const wire = config ? compact(config) : currentWire().wire;
-  try {
-    const res = await fetch('/api/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(wire),
-    });
-    if (res.ok) {
-      const { id } = (await res.json()) as { id?: string };
-      if (id) return `${window.location.origin}/playground?s=${id}`;
-    }
-  } catch {
-    /* fall through */
+  const wire = config ? compact(config) : currentWire();
+  const res = await fetch('/api/share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(wire),
+  });
+  if (!res.ok) {
+    throw new Error(`Share API returned ${res.status}`);
   }
-  return fragmentLink(wire);
+  const { id } = (await res.json()) as { id?: string };
+  if (!id) throw new Error('Share API returned no id');
+  return `${window.location.origin}/playground?s=${id}`;
 };
 
 export const loadConfigFromUrl = async (): Promise<ShareableRequestConfig | null> => {
@@ -140,34 +117,16 @@ export const loadConfigFromUrl = async (): Promise<ShareableRequestConfig | null
 
   const url = new URL(window.location.href);
   const shareId = url.searchParams.get('s');
-  if (shareId) {
-    try {
-      const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
-      if (res.ok) {
-        const wire = (await res.json()) as CompactWire;
-        return expand(wire);
-      }
-    } catch (error) {
-      console.error('Failed to fetch shared request:', error);
-    }
-    return null;
-  }
+  if (!shareId) return null;
 
-  const hash = window.location.hash;
-  const compactMatch = hash.match(/^#s=([^&]+)/);
-  const legacyMatch = hash.match(/^#share=([^&]+)/);
   try {
-    if (compactMatch) {
-      const json = fromBase64Url(compactMatch[1]);
-      const wire = JSON.parse(json) as CompactWire;
+    const res = await fetch(`/api/share/${encodeURIComponent(shareId)}`);
+    if (res.ok) {
+      const wire = (await res.json()) as CompactWire;
       return expand(wire);
     }
-    if (legacyMatch) {
-      const decoded = decodeURIComponent(legacyMatch[1]);
-      return JSON.parse(decoded) as ShareableRequestConfig;
-    }
   } catch (error) {
-    console.error('Failed to decode shared request config:', error);
+    console.error('Failed to fetch shared request:', error);
   }
   return null;
 };

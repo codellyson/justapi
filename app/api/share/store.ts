@@ -1,33 +1,27 @@
 import 'server-only';
+import { put as blobPut, head, BlobNotFoundError } from '@vercel/blob';
 
-const memory = new Map<string, string>();
 const blobPath = (id: string) => `shares/${id}.json`;
 
 export async function put(id: string, data: string): Promise<void> {
-  try {
-    const { put: blobPut } = await import('@vercel/blob');
-    await blobPut(blobPath(id), data, {
-      access: 'public',
-      addRandomSuffix: false,
-      contentType: 'application/json',
-      cacheControlMaxAge: 31536000,
-    });
-    return;
-  } catch {
-    memory.set(id, data);
-  }
+  await blobPut(blobPath(id), data, {
+    access: 'public',
+    addRandomSuffix: false,
+    contentType: 'application/json',
+    cacheControlMaxAge: 31536000,
+  });
 }
 
 export async function get(id: string): Promise<string | null> {
   try {
-    const { head } = await import('@vercel/blob');
     const blob = await head(blobPath(id));
     const res = await fetch(blob.url);
-    if (res.ok) return await res.text();
-  } catch {
-    /* fall through to memory */
+    if (!res.ok) return null;
+    return await res.text();
+  } catch (err) {
+    if (err instanceof BlobNotFoundError) return null;
+    throw err;
   }
-  return memory.get(id) ?? null;
 }
 
 const ALPHABET =

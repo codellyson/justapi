@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   useStackStore,
   useActiveDisplayedCardId,
@@ -8,7 +8,7 @@ import {
 import { useWorkspaceStore } from "../use-workspace-store";
 import { MethodPill } from "./method-pill";
 import { StatusBadge } from "../../components/ui/status-badge";
-import { Layers, Trash2, Share2 } from "lucide-react";
+import { Layers, Trash2, Share2, Loader2 } from "lucide-react";
 import { shareCard } from "../share";
 import { useToastStore } from "../../stores/use-toast-store";
 
@@ -25,6 +25,7 @@ export const PeekRail = ({ onShowMore }: PeekRailProps) => {
   const displayedCardId = useActiveDisplayedCardId();
   const setDisplayed = useStackStore((s) => s.setDisplayed);
   const removeCard = useStackStore((s) => s.remove);
+  const [sharingId, setSharingId] = useState<string | null>(null);
 
   const inStackOther = useMemo(
     () =>
@@ -96,9 +97,13 @@ export const PeekRail = ({ onShowMore }: PeekRailProps) => {
               <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center gap-0.5 opacity-0 translate-x-2 transition-all duration-150 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto">
                 <button
                   type="button"
+                  disabled={sharingId === card.id}
                   onClick={async (e) => {
                     e.stopPropagation();
+                    if (sharingId) return;
+                    setSharingId(card.id);
                     const link = await shareCard(card);
+                    setSharingId(null);
                     useToastStore
                       .getState()
                       .showToast(
@@ -106,11 +111,15 @@ export const PeekRail = ({ onShowMore }: PeekRailProps) => {
                         link ? "Share link copied" : "Couldn't share"
                       );
                   }}
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted hover:text-primary hover:bg-bg/60"
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted hover:text-primary hover:bg-bg/60 disabled:opacity-60"
                   title="Copy share link"
                   aria-label="Share request"
                 >
-                  <Share2 className="w-3.5 h-3.5" />
+                  {sharingId === card.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Share2 className="w-3.5 h-3.5" />
+                  )}
                 </button>
                 <button
                   type="button"

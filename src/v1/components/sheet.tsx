@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Drawer } from "vaul";
-import { Share2, Check } from "lucide-react";
+import { Share2, Check, Loader2, RotateCw } from "lucide-react";
 import type { Card } from "../types";
 import { useDraftStore } from "../use-draft-store";
 import { useToastStore } from "../../stores/use-toast-store";
 import { formatSize } from "../drift";
 import { hostAccent } from "../host";
 import { shareCard } from "../share";
+import { sendDirect } from "../use-v1-send";
 import { MethodPill } from "./method-pill";
 import { ResultTabs } from "./result-tabs";
 import { StatusBadge } from "../../components/ui/status-badge";
@@ -37,15 +38,37 @@ export const Sheet = ({ card, open, onOpenChange }: SheetProps) => {
     onOpenChange(false);
   };
 
-  const [shareCopied, setShareCopied] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "loading" | "copied">(
+    "idle"
+  );
   const onShare = async () => {
+    if (shareState !== "idle") return;
+    setShareState("loading");
     const link = await shareCard(card);
     if (link) {
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 1500);
+      setShareState("copied");
+      setTimeout(() => setShareState("idle"), 1500);
       useToastStore.getState().showToast("info", "Share link copied");
     } else {
+      setShareState("idle");
       useToastStore.getState().showToast("error", "Couldn't share");
+    }
+  };
+
+  const [rerunning, setRerunning] = useState(false);
+  const onRerun = async () => {
+    if (rerunning) return;
+    setRerunning(true);
+    try {
+      await sendDirect({
+        method: card.request.method,
+        url: card.request.urlRaw || card.request.url,
+        headers: card.request.headers,
+        body: card.request.body ?? undefined,
+        bodyType: card.request.bodyType,
+      });
+    } finally {
+      setRerunning(false);
     }
   };
 
@@ -84,12 +107,33 @@ export const Sheet = ({ card, open, onOpenChange }: SheetProps) => {
             </button>
             <button
               type="button"
+              onClick={onRerun}
+              disabled={rerunning}
+              className="inline-flex items-center gap-1.5 text-[11px] text-secondary hover:text-primary font-mono shrink-0 disabled:opacity-60"
+              title="Re-run this request"
+              aria-label="Re-run this request"
+            >
+              <RotateCw
+                className={`w-3 h-3 ${rerunning ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">
+                {rerunning ? "re-running" : "re-run"}
+              </span>
+            </button>
+            <button
+              type="button"
               onClick={onShare}
-              className="inline-flex items-center gap-1.5 text-[11px] text-secondary hover:text-primary font-mono shrink-0"
+              disabled={shareState === "loading"}
+              className="inline-flex items-center gap-1.5 text-[11px] text-secondary hover:text-primary font-mono shrink-0 disabled:opacity-60"
               title="Copy share link"
               aria-label="Share this request"
             >
-              {shareCopied ? (
+              {shareState === "loading" ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span className="hidden sm:inline">sharing…</span>
+                </>
+              ) : shareState === "copied" ? (
                 <>
                   <Check className="w-3 h-3" />
                   <span className="hidden sm:inline">copied</span>

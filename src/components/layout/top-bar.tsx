@@ -1,6 +1,6 @@
 'use client';
 
-import { Send, Save, Edit, AlertCircle, Share2, Check, Menu, Code2, X } from "lucide-react";
+import { Send, Save, Edit, AlertCircle, Share2, Check, Menu, Code2, X, Loader2 } from "lucide-react";
 import { useRequestStore } from "../../stores/use-request-store";
 import { useRequest } from "../../hooks/use-request";
 import { useResponseStore } from "../../stores/use-response-store";
@@ -45,6 +45,7 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
     useRequestStore.getState().url
   );
   const [shareLinkCopied, setShareLinkCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [snippetOpen, setSnippetOpen] = useState(false);
 
   const activeCollection = items.find((item) => item.id === activeCollectionId);
@@ -95,6 +96,8 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
   };
 
   const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
     try {
       const shareLink = await generateShareableLink();
       await navigator.clipboard.writeText(shareLink);
@@ -104,6 +107,8 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
     } catch (error) {
       console.error("Failed to create share link:", error);
       showToast("error", "Failed to copy share link");
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -223,11 +228,14 @@ export const TopBar = ({ onOpenSidebar }: TopBarProps) => {
               variant="ghost"
               size="sm"
               onClick={handleShare}
+              disabled={sharing}
               title="Share this request configuration"
               className="w-9 h-9 p-0 relative"
               aria-label="Share request"
             >
-              {shareLinkCopied ? (
+              {sharing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : shareLinkCopied ? (
                 <Check className="w-4 h-4" />
               ) : (
                 <Share2 className="w-4 h-4" />

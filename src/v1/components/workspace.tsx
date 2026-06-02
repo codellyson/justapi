@@ -6,12 +6,12 @@ import { useWorkspaceStore } from "../use-workspace-store";
 import { useV1Keyboard } from "../use-keyboard";
 import { useDraftStore } from "../use-draft-store";
 import { useToastStore } from "../../stores/use-toast-store";
+import { useV1Send } from "../use-v1-send";
 import { ToastContainer } from "../../components/ui/toast";
 import { ThemeToggle } from "../../components/ui/theme-toggle";
 import { InputBar } from "./input-bar";
 import { PopoverStack } from "./popover-stack";
 import { Palette } from "./palette";
-import { CursorDemo } from "./cursor-demo";
 import { Sheet } from "./sheet";
 import { PeekRail } from "./peek-rail";
 import { WorkspaceTabs } from "./workspace-tabs";
@@ -35,18 +35,27 @@ export const Workspace = () => {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const toasts = useToastStore((s) => s.toasts);
   const removeToast = useToastStore((s) => s.removeToast);
+  const { send } = useV1Send();
 
   useV1Keyboard({ openPalette: () => setPaletteOpen(true) });
 
-  // If we land here via a share link (?s=ID or #s=ENC), decode it and
-  // apply the request to the active workspace's draft. Then clean the
-  // URL so reloads don't re-apply the same payload.
+  // If we land here via a share link (?s=ID), fetch the payload, apply
+  // it to the active workspace's draft, clean the URL so reloads don't
+  // re-apply, and immediately fire the request.
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const url = new URL(window.location.href);
+      if (!url.searchParams.get("s")) return;
       const { loadConfigFromUrl } = await import("../../utils/sharing");
       const cfg = await loadConfigFromUrl();
-      if (cancelled || !cfg) return;
+      if (cancelled) return;
+      if (!cfg) {
+        useToastStore
+          .getState()
+          .showToast("error", "Shared link expired or unavailable");
+        return;
+      }
       const enabledHeaders: Record<string, string> = {};
       cfg.headers.forEach((h) => {
         if (h.enabled && h.key) enabledHeaders[h.key] = h.value;
@@ -60,15 +69,15 @@ export const Workspace = () => {
         authConfig: cfg.authConfig,
         headers: enabledHeaders,
       });
-      useToastStore.getState().showToast("info", "Loaded shared request");
       if (window.history.replaceState) {
         window.history.replaceState(null, "", window.location.pathname);
       }
+      void send();
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [send]);
 
   const drawerOpen = displayedCard !== null;
 
@@ -80,7 +89,6 @@ export const Workspace = () => {
       {!drawerOpen && (
         <div className="absolute inset-0 flex flex-col items-stretch justify-center">
           <InputBar />
-          {!hasInStack && <CursorDemo />}
           <WorkspaceTabs />
           <ExamplePills />
           <PopoverStack />

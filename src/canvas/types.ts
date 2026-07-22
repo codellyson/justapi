@@ -30,9 +30,6 @@ export interface RequestNodeData extends Record<string, unknown> {
   name: string;
   snapshot: CardRequestSnapshot;
   collapsed: boolean;
-  /** Saved-request id this node was spawned from (set by collection
-   *  nodes so they can tell what's already on the board). */
-  spawnedFrom?: string;
 }
 
 /** Env nodes surface an environment from `useEnvironmentStore` on the
@@ -41,9 +38,9 @@ export interface EnvNodeData extends Record<string, unknown> {
   environmentId: string;
 }
 
-/** Collection nodes are spawn sources: they reference a collection from
- *  the collections store and fan its saved requests out as linked
- *  request nodes. */
+/** Collection nodes are flow origins: the root of a request tree.
+ *  Requests are added from them (and branch from each other), and every
+ *  request wired under an origin belongs to that collection. */
 export interface CollectionNodeData extends Record<string, unknown> {
   collectionId: string;
 }

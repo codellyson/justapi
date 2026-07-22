@@ -6,7 +6,9 @@ import {
   ReactFlowProvider,
   Background,
   BackgroundVariant,
+  useReactFlow,
   type NodeMouseHandler,
+  type OnConnectEnd,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "../canvas.css";
@@ -44,10 +46,26 @@ const CanvasInner = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const { screenToFlowPosition } = useReactFlow();
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => setSelectedNodeId(node.id),
     []
+  );
+
+  // Dropping a wire on empty canvas grows the tree: a new blank request
+  // appears right there, already wired from wherever the drag started.
+  const onConnectEnd: OnConnectEnd = useCallback(
+    (event, connectionState) => {
+      if (connectionState.isValid) return;
+      const fromNode = connectionState.fromNode;
+      if (!fromNode || connectionState.fromHandle?.type !== "source") return;
+      const { clientX, clientY } =
+        "changedTouches" in event ? event.changedTouches[0] : event;
+      const position = screenToFlowPosition({ x: clientX, y: clientY });
+      useCanvasStore.getState().addLinkedRequest(fromNode.id, position);
+    },
+    [screenToFlowPosition]
   );
 
   // Share links (`/?s=ID`, incl. redirected legacy /playground links):
@@ -85,6 +103,7 @@ const CanvasInner = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onConnectEnd={onConnectEnd}
         onNodeClick={onNodeClick}
         onPaneClick={() => {
           setInspectedEdge(null);

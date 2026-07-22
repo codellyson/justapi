@@ -10,6 +10,7 @@ import {
   Trash2,
   Bookmark,
   Check,
+  Plus,
 } from "lucide-react";
 import { methodPillColor } from "./method-pill";
 import { JsonView } from "./json-view";
@@ -114,6 +115,33 @@ const UrlText = ({ url }: { url: string }) => {
 
 type Section = "headers" | "body" | "auth" | null;
 
+/** Walk upstream from a node to the flow origin it belongs to (if any)
+ *  and return that origin's collection id. */
+const findOriginCollectionId = (
+  nodes: { id: string; type?: string; data: Record<string, unknown> }[],
+  edges: { source: string; target: string }[],
+  nodeId: string
+): string | null => {
+  const visited = new Set<string>([nodeId]);
+  const queue = [nodeId];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const e of edges) {
+      if (e.target !== cur) continue;
+      const src = nodes.find((n) => n.id === e.source);
+      if (!src || visited.has(src.id)) continue;
+      if (src.type === "collection") {
+        return (src.data.collectionId as string) ?? null;
+      }
+      if (src.type === "request") {
+        visited.add(src.id);
+        queue.push(src.id);
+      }
+    }
+  }
+  return null;
+};
+
 export const RequestNodeCard = memo(
   ({ id, data, selected }: NodeProps<RequestNodeType>) => {
     const { name, snapshot, collapsed } = data as RequestNodeData;
@@ -121,6 +149,20 @@ export const RequestNodeCard = memo(
     const updateSnapshot = useCanvasStore((s) => s.updateSnapshot);
     const updateNodeData = useCanvasStore((s) => s.updateNodeData);
     const removeNode = useCanvasStore((s) => s.removeNode);
+    const addLinkedRequest = useCanvasStore((s) => s.addLinkedRequest);
+
+    // Which flow origin does this request trace back to? Shown as a
+    // membership badge in the eyebrow.
+    const originCollectionId = useCanvasStore((s) => {
+      const g = s.graphs[s.activeGraphId];
+      if (!g) return null;
+      return findOriginCollectionId(g.nodes, g.edges, id);
+    });
+    const originName = useCollectionsStore((s) =>
+      originCollectionId
+        ? s.collections.find((c) => c.id === originCollectionId)?.name ?? null
+        : null
+    );
 
     const [openSection, setOpenSection] = useState<Section>(null);
     const [editingUrl, setEditingUrl] = useState(!snapshot.urlRaw);
@@ -158,6 +200,19 @@ export const RequestNodeCard = memo(
 
     const headerCount = Object.keys(snapshot.headers).length;
 
+    /** Add the next request in the chain, wired from this one. */
+    const branch = () => {
+      const s = useCanvasStore.getState();
+      const g = s.graphs[s.activeGraphId];
+      const self = g?.nodes.find((n) => n.id === id);
+      if (!self || !g) return;
+      const outgoing = g.edges.filter((e) => e.source === id).length;
+      addLinkedRequest(id, {
+        x: self.position.x + 420,
+        y: self.position.y + outgoing * 150,
+      });
+    };
+
     const metaChip = (
       section: Exclude<Section, null>,
       label: string,
@@ -183,7 +238,7 @@ export const RequestNodeCard = memo(
     return (
       <div
         className={cn(
-          "group w-[360px] overflow-visible rounded-xl border bg-bg-secondary/95 font-sans shadow-[0_10px_28px_-14px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-[border-color,box-shadow]",
+          "group relative w-[360px] overflow-visible rounded-xl border bg-bg-secondary/95 font-sans shadow-[0_10px_28px_-14px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-[border-color,box-shadow]",
           selected
             ? "border-accent/60 shadow-[0_10px_32px_-12px_rgba(0,0,0,0.55)]"
             : "border-border/60 hover:border-border"
@@ -200,6 +255,16 @@ export const RequestNodeCard = memo(
           className="justapi-handle"
           style={hasHost ? { borderColor: accent.stripe } : undefined}
         />
+
+        {/* branch: add the next request in the chain */}
+        <button
+          type="button"
+          onClick={branch}
+          className="nodrag absolute -right-9 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-bg-secondary/95 text-secondary opacity-0 shadow-sm backdrop-blur-sm transition-opacity hover:border-accent hover:text-accent group-hover:opacity-100"
+          title="Add next request — branches from this one"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
 
         {/* eyebrow: host identity band */}
         <div
@@ -222,6 +287,15 @@ export const RequestNodeCard = memo(
             {hasHost ? host : "new request"}
           </span>
           <div className="flex-1" />
+          {originName && (
+            <span
+              className="flex max-w-[90px] shrink-0 items-center gap-1 rounded bg-accent/10 px-1 py-px text-[8px] font-semibold uppercase tracking-[0.1em] text-accent"
+              title={`Part of the "${originName}" flow`}
+            >
+              <Bookmark className="h-2 w-2 shrink-0" />
+              <span className="truncate">{originName}</span>
+            </span>
+          )}
           <input
             className="nodrag w-28 bg-transparent text-right text-[9px] uppercase tracking-[0.12em] text-secondary/80 outline-none placeholder:text-muted/40"
             placeholder="name"

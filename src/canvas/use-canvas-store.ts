@@ -78,17 +78,9 @@ interface CanvasState {
   ) => void;
   addEnvNode: (position: XYPosition, environmentId: string) => string;
   addCollectionNode: (position: XYPosition, collectionId: string) => string;
-  /** Spawn request nodes linked (dataless edges) from a source node —
-   *  used by collection nodes to fan out their saved requests. */
-  spawnLinked: (
-    sourceNodeId: string,
-    items: {
-      position: XYPosition;
-      snapshot: CardRequestSnapshot;
-      name: string;
-      spawnedFrom?: string;
-    }[]
-  ) => void;
+  /** Add a new blank request node wired from a source node — how a flow
+   *  tree grows from its origin (and branches from its requests). */
+  addLinkedRequest: (sourceNodeId: string, position: XYPosition) => string;
   updateNodeData: (
     id: string,
     patch:
@@ -248,36 +240,38 @@ export const useCanvasStore = create<CanvasState>()(
         set((s) => withActive(s, (g) => ({ nodes: [...g.nodes, node] })));
         return id;
       },
-      spawnLinked: (sourceNodeId, items) => {
-        const nodes: RequestNode[] = items.map((it) => ({
-          id: uid(),
+      addLinkedRequest: (sourceNodeId, position) => {
+        const s = get();
+        const g = s.graphs[s.activeGraphId];
+        const source = g?.nodes.find((n) => n.id === sourceNodeId);
+        if (!source) return "";
+        const nodeId = uid();
+        const node: RequestNode = {
+          id: nodeId,
           type: "request",
-          position: it.position,
-          data: {
-            name: it.name,
-            // Copy so node edits never mutate the saved collection entry.
-            snapshot: {
-              ...it.snapshot,
-              headers: { ...it.snapshot.headers },
-              authConfig: { ...it.snapshot.authConfig },
-            },
-            collapsed: true,
-            spawnedFrom: it.spawnedFrom,
-          },
-        }));
-        const edges: BindingEdge[] = nodes.map((n) => ({
+          position,
+          data: { name: "", snapshot: emptySnapshot(), collapsed: false },
+        };
+        // Origin/env sources wire silently; request sources get a binding
+        // shell to fill in later (no inspector popup — the node is blank).
+        const silent =
+          source.type === "env" || source.type === "collection";
+        const edge: BindingEdge = {
           id: uid(),
           source: sourceNodeId,
-          target: n.id,
+          target: nodeId,
           type: "binding",
-          data: undefined,
-        }));
-        set((s) =>
-          withActive(s, (g) => ({
-            nodes: [...g.nodes, ...nodes],
-            edges: [...g.edges, ...edges],
+          data: silent
+            ? undefined
+            : { sourcePath: "data.", targetKind: "variable", targetName: "" },
+        };
+        set((state) =>
+          withActive(state, (graph) => ({
+            nodes: [...graph.nodes, node],
+            edges: [...graph.edges, edge],
           }))
         );
+        return nodeId;
       },
       updateNodeData: (id, patch) =>
         set((s) =>

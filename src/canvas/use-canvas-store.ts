@@ -59,6 +59,8 @@ interface CanvasState {
   createGraph: (name?: string) => string;
   renameGraph: (id: string, name: string) => void;
   deleteGraph: (id: string) => void;
+  /** Remove every node and edge from the active graph. */
+  clearGraph: () => void;
   setActiveGraph: (id: string) => void;
 
   onNodesChange: (changes: NodeChange<CanvasNode>[]) => void;
@@ -145,6 +147,11 @@ export const useCanvasStore = create<CanvasState>()(
           }
           return { graphs: rest, activeGraphId };
         }),
+      clearGraph: () =>
+        set((s) => ({
+          ...withActive(s, () => ({ nodes: [], edges: [] })),
+          inspectedEdgeId: null,
+        })),
       setActiveGraph: (id) =>
         set((s) => (s.graphs[id] ? { activeGraphId: id, inspectedEdgeId: null } : {})),
 

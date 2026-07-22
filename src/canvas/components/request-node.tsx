@@ -266,7 +266,7 @@ export const RequestNodeCard = memo(
                   if (snapshot.urlRaw) setEditingUrl(false);
                 }
               }}
-              autoFocus={!!snapshot.urlRaw || undefined}
+              autoFocus
               spellCheck={false}
             />
           ) : (

@@ -11,6 +11,7 @@ import {
   Check,
   Pencil,
   Trash2,
+  Eraser,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
@@ -40,8 +41,10 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
   const createGraph = useCanvasStore((s) => s.createGraph);
   const renameGraph = useCanvasStore((s) => s.renameGraph);
   const deleteGraph = useCanvasStore((s) => s.deleteGraph);
+  const clearGraph = useCanvasStore((s) => s.clearGraph);
 
   const [graphsOpen, setGraphsOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const active = graphs[activeGraphId];
 
   const centerPosition = () =>
@@ -106,7 +109,10 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
       <div className="relative">
         <button
           type="button"
-          onClick={() => setGraphsOpen((o) => !o)}
+          onClick={() => {
+            setGraphsOpen((o) => !o);
+            setConfirmClear(false);
+          }}
           className={cn(railBtn, graphsOpen && "text-primary bg-bg/70")}
           title={`Canvas: ${active?.name ?? ""}`}
         >
@@ -180,6 +186,30 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
             >
               <Plus className="h-4 w-4" />
               new canvas
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const count = active?.nodes.length ?? 0;
+                if (count > 0 && !confirmClear) {
+                  setConfirmClear(true);
+                  return;
+                }
+                clearGraph();
+                setConfirmClear(false);
+                setGraphsOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-2 px-3.5 py-2 transition-colors",
+                confirmClear
+                  ? "bg-danger/10 text-danger"
+                  : "text-secondary hover:text-danger hover:bg-danger/10"
+              )}
+            >
+              <Eraser className="h-4 w-4" />
+              {confirmClear
+                ? `really clear ${active?.nodes.length ?? 0} nodes?`
+                : "clear board"}
             </button>
           </div>
         )}

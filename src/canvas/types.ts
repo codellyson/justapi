@@ -30,6 +30,9 @@ export interface RequestNodeData extends Record<string, unknown> {
   name: string;
   snapshot: CardRequestSnapshot;
   collapsed: boolean;
+  /** Saved-request id this node was spawned from (set by collection
+   *  nodes so they can tell what's already on the board). */
+  spawnedFrom?: string;
 }
 
 /** Env nodes surface an environment from `useEnvironmentStore` on the

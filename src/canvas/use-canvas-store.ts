@@ -82,7 +82,12 @@ interface CanvasState {
    *  used by collection nodes to fan out their saved requests. */
   spawnLinked: (
     sourceNodeId: string,
-    items: { position: XYPosition; snapshot: CardRequestSnapshot; name: string }[]
+    items: {
+      position: XYPosition;
+      snapshot: CardRequestSnapshot;
+      name: string;
+      spawnedFrom?: string;
+    }[]
   ) => void;
   updateNodeData: (
     id: string,
@@ -257,6 +262,7 @@ export const useCanvasStore = create<CanvasState>()(
               authConfig: { ...it.snapshot.authConfig },
             },
             collapsed: true,
+            spawnedFrom: it.spawnedFrom,
           },
         }));
         const edges: BindingEdge[] = nodes.map((n) => ({

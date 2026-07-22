@@ -28,6 +28,8 @@ interface RunState {
   setPending: (nodeId: string) => void;
   setSuccess: (nodeId: string, response: HttpResponse) => void;
   setError: (nodeId: string, error: string, response?: HttpResponse) => void;
+  /** Flow-source summary: no response, just a verdict line. */
+  setSummary: (nodeId: string, message: string, failed: boolean) => void;
   reset: (nodeId: string) => void;
 }
 
@@ -60,6 +62,18 @@ export const useRunStore = create<RunState>()((set) => ({
           status: "error",
           response: response ?? null,
           error,
+          finishedAt: Date.now(),
+        },
+      },
+    })),
+  setSummary: (nodeId, message, failed) =>
+    set((s) => ({
+      runs: {
+        ...s.runs,
+        [nodeId]: {
+          status: failed ? "error" : "success",
+          response: null,
+          error: message,
           finishedAt: Date.now(),
         },
       },

@@ -24,6 +24,40 @@ const nodeById = (g: CanvasGraph, id: string): CanvasNode | undefined =>
 const isRequestNode = (n: CanvasNode | undefined): boolean =>
   n?.type === "request";
 
+/** Kahn's algorithm over the subgraph induced by `members`. */
+const topoOrder = (
+  members: Set<string>,
+  g: CanvasGraph
+): { order: string[] } | { cycle: string[] } => {
+  const indegree = new Map<string, number>();
+  members.forEach((id) => indegree.set(id, 0));
+  const edges = g.edges.filter(
+    (e) => members.has(e.source) && members.has(e.target)
+  );
+  for (const e of edges) {
+    indegree.set(e.target, (indegree.get(e.target) ?? 0) + 1);
+  }
+  // Dedupe parallel edges for indegree purposes? No — Kahn works as long
+  // as we decrement once per edge.
+  const ready = [...members].filter((id) => (indegree.get(id) ?? 0) === 0);
+  const order: string[] = [];
+  while (ready.length > 0) {
+    const id = ready.shift()!;
+    order.push(id);
+    for (const e of edges) {
+      if (e.source !== id) continue;
+      const d = (indegree.get(e.target) ?? 0) - 1;
+      indegree.set(e.target, d);
+      if (d === 0) ready.push(e.target);
+    }
+  }
+  if (order.length !== members.size) {
+    const cycle = [...members].filter((id) => (indegree.get(id) ?? 0) > 0);
+    return { cycle };
+  }
+  return { order };
+};
+
 /**
  * Topological order of the request-node subgraph upstream of (and
  * including) `targetId`. Env nodes are excluded — they contribute
@@ -47,35 +81,31 @@ export const upstreamOrder = (
       }
     }
   }
+  return topoOrder(upstream, g);
+};
 
-  // Kahn over the induced subgraph.
-  const indegree = new Map<string, number>();
-  upstream.forEach((id) => indegree.set(id, 0));
-  const edges = g.edges.filter(
-    (e) => upstream.has(e.source) && upstream.has(e.target)
-  );
-  for (const e of edges) {
-    indegree.set(e.target, (indegree.get(e.target) ?? 0) + 1);
-  }
-  // Dedupe parallel edges for indegree purposes? No — Kahn works as long
-  // as we decrement once per edge.
-  const ready = [...upstream].filter((id) => (indegree.get(id) ?? 0) === 0);
-  const order: string[] = [];
-  while (ready.length > 0) {
-    const id = ready.shift()!;
-    order.push(id);
-    for (const e of edges) {
+/**
+ * Topological order of every request node reachable downstream of a
+ * flow-source node (following source→request and request→request edges).
+ */
+export const downstreamOrder = (
+  sourceId: string,
+  g: CanvasGraph
+): { order: string[] } | { cycle: string[] } => {
+  const downstream = new Set<string>();
+  const queue = [sourceId];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    for (const e of g.edges) {
       if (e.source !== id) continue;
-      const d = (indegree.get(e.target) ?? 0) - 1;
-      indegree.set(e.target, d);
-      if (d === 0) ready.push(e.target);
+      if (!isRequestNode(nodeById(g, e.target))) continue;
+      if (!downstream.has(e.target)) {
+        downstream.add(e.target);
+        queue.push(e.target);
+      }
     }
   }
-  if (order.length !== upstream.size) {
-    const cycle = [...upstream].filter((id) => (indegree.get(id) ?? 0) > 0);
-    return { cycle };
-  }
-  return { order };
+  return topoOrder(downstream, g);
 };
 
 /**
@@ -218,3 +248,41 @@ export const runNode = async (
 /** Force-re-run the whole upstream closure plus the node itself. */
 export const runChain = (nodeId: string): Promise<void> =>
   runNode(nodeId, { force: true });
+
+/**
+ * Run a flow from its source node: execute every request reachable
+ * downstream, in topological order, continuing past failures (a test
+ * suite reports failures rather than stopping at the first one). The
+ * source node's run record carries the suite summary.
+ */
+export const runFlow = async (sourceId: string): Promise<void> => {
+  const g = activeGraph();
+  if (!g) return;
+
+  const store = useRunStore.getState();
+  const result = downstreamOrder(sourceId, g);
+  if ("cycle" in result) {
+    store.setSummary(sourceId, "cycle detected in flow", true);
+    return;
+  }
+  if (result.order.length === 0) {
+    store.setSummary(sourceId, "nothing wired to this flow", true);
+    return;
+  }
+
+  store.setPending(sourceId);
+  let failed = 0;
+  for (const id of result.order) {
+    const ok = await runSingle(id, g);
+    if (!ok) failed++;
+  }
+  useRunStore
+    .getState()
+    .setSummary(
+      sourceId,
+      failed === 0
+        ? `${result.order.length} passed`
+        : `${failed} of ${result.order.length} failed`,
+      failed > 0
+    );
+};

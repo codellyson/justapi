@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bookmark, Trash2, Plus, ArrowRight } from "lucide-react";
+import { Bookmark, Trash2, Plus, ArrowRight, Play } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { MethodPill } from "./method-pill";
 import { useCollectionsStore, type SavedRequest } from "../use-collections-store";
@@ -11,6 +11,8 @@ import type {
   CollectionNodeData,
 } from "../types";
 import { useCanvasStore } from "../use-canvas-store";
+import { useRunStore, idleRun } from "../use-run-store";
+import { runFlow } from "../engine";
 
 const SPAWN_X_GAP = 420;
 const SPAWN_Y_GAP = 150;
@@ -26,8 +28,10 @@ export const CollectionNodeCard = memo(
     const updateNodeData = useCanvasStore((s) => s.updateNodeData);
     const removeNode = useCanvasStore((s) => s.removeNode);
     const spawnLinked = useCanvasStore((s) => s.spawnLinked);
+    const run = useRunStore((s) => s.runs[id]) ?? idleRun;
 
     const collection = collections.find((c) => c.id === collectionId);
+    const running = run.status === "pending";
 
     const spawn = (requests: SavedRequest[]) => {
       if (requests.length === 0) return;
@@ -78,6 +82,20 @@ export const CollectionNodeCard = memo(
           </select>
           <button
             type="button"
+            onClick={() => void runFlow(id)}
+            disabled={running}
+            className={cn(
+              "nodrag flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+              running
+                ? "animate-pulse border-accent/60 text-accent"
+                : "border-accent/50 text-accent hover:bg-accent hover:text-accent-text"
+            )}
+            title="Run flow — executes everything wired downstream, in order"
+          >
+            <Play className="ml-px h-2.5 w-2.5" />
+          </button>
+          <button
+            type="button"
             onClick={() => removeNode(id)}
             className="nodrag rounded p-0.5 text-muted/60 opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
             title="Remove from canvas (collection is kept)"
@@ -123,13 +141,33 @@ export const CollectionNodeCard = memo(
             type="button"
             onClick={() => spawn(collection.requests)}
             className={cn(
-              "nodrag flex w-full items-center justify-center gap-1.5 rounded-b-[11px] border-t border-border/40 px-3 py-1.5",
-              "text-[10px] font-medium text-accent transition-colors hover:bg-accent/10"
+              "nodrag flex w-full items-center justify-center gap-1.5 border-t border-border/40 px-3 py-1.5",
+              "text-[10px] font-medium text-accent transition-colors hover:bg-accent/10",
+              run.status === "idle" && "rounded-b-[11px]"
             )}
           >
             spawn all {collection.requests.length}
             <ArrowRight className="h-3 w-3" />
           </button>
+        )}
+
+        {/* flow verdict */}
+        {running && (
+          <div className="rounded-b-[11px] border-t border-border/40 px-3 py-1.5 text-[10px] text-accent">
+            <span className="animate-pulse">running flow…</span>
+          </div>
+        )}
+        {!running && run.error && (
+          <div
+            className={cn(
+              "rounded-b-[11px] border-t border-border/40 px-3 py-1.5 text-[10px] font-medium",
+              run.status === "error"
+                ? "bg-danger/[0.07] text-danger"
+                : "bg-success/[0.07] text-success"
+            )}
+          >
+            {run.error}
+          </div>
         )}
       </div>
     );

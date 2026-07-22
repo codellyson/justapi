@@ -1,6 +1,5 @@
 import type { HttpMethod } from "../utils/http";
-import type { AuthType, BodyType } from "../stores/use-request-store";
-import type { AuthConfig } from "./use-draft-store";
+import type { AuthType, BodyType, AuthConfig } from "./types";
 
 export interface ParsedRequest {
   method: HttpMethod;

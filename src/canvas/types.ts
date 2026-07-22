@@ -1,0 +1,75 @@
+import type { Node, Edge, Viewport } from "@xyflow/react";
+import type { HttpMethod } from "../utils/http";
+
+export type BodyType = "json" | "form-data" | "raw" | "none";
+export type AuthType = "none" | "bearer" | "basic" | "api-key";
+
+export interface AuthConfig {
+  bearerToken?: string;
+  username?: string;
+  password?: string;
+  apiKey?: string;
+  apiKeyHeader?: string;
+}
+
+/** A frozen, self-contained request: everything needed to (re)send it. */
+export interface CardRequestSnapshot {
+  method: HttpMethod;
+  url: string;
+  urlRaw: string;
+  headers: Record<string, string>;
+  body: string | null;
+  bodyType: BodyType;
+  authType: AuthType;
+  authConfig: Record<string, string | undefined>;
+}
+
+/** Data payload of a request node. The snapshot reuses the v1 frozen
+ *  request shape so send/parse/share machinery works unchanged. */
+export interface RequestNodeData extends Record<string, unknown> {
+  name: string;
+  snapshot: CardRequestSnapshot;
+  collapsed: boolean;
+}
+
+/** Env nodes surface an environment from `useEnvironmentStore` on the
+ *  canvas; edits write through to the store. */
+export interface EnvNodeData extends Record<string, unknown> {
+  environmentId: string;
+}
+
+/** Collection nodes are spawn sources: they reference a collection from
+ *  the collections store and fan its saved requests out as linked
+ *  request nodes. */
+export interface CollectionNodeData extends Record<string, unknown> {
+  collectionId: string;
+}
+
+/**
+ * A binding edge feeds a value extracted from the source node's response
+ * into the target request — either as a `{{targetName}}` variable or as a
+ * literal header. Env→request edges have no data (they mean "use this
+ * environment's variables").
+ */
+export interface BindingEdgeData extends Record<string, unknown> {
+  sourcePath: string;
+  targetKind: "variable" | "header";
+  targetName: string;
+}
+
+export type RequestNode = Node<RequestNodeData, "request">;
+export type EnvNode = Node<EnvNodeData, "env">;
+export type CollectionNode = Node<CollectionNodeData, "collection">;
+export type CanvasNode = RequestNode | EnvNode | CollectionNode;
+export type BindingEdge = Edge<BindingEdgeData>;
+
+export interface CanvasGraph {
+  id: string;
+  name: string;
+  createdAt: number;
+  nodes: CanvasNode[];
+  edges: BindingEdge[];
+  viewport: Viewport | null;
+}
+
+export type RunStatus = "idle" | "pending" | "success" | "error";

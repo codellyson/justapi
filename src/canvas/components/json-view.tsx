@@ -84,7 +84,7 @@ export const JsonView = ({ value, className }: JsonViewProps) => {
   }, [value]);
 
   const baseCls =
-    "font-mono text-[12px] leading-[1.55] text-primary whitespace-pre overflow-auto h-full px-4 py-3";
+    "font-mono text-[12px] leading-[1.65] text-primary whitespace-pre overflow-auto h-full px-4 py-3";
 
   if (!tokens) {
     return (

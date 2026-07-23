@@ -32,17 +32,14 @@ export interface RequestNodeData extends Record<string, unknown> {
   collapsed: boolean;
 }
 
-/** Env nodes surface an environment from `useEnvironmentStore` on the
- *  canvas; edits write through to the store. */
-export interface EnvNodeData extends Record<string, unknown> {
-  environmentId: string;
-}
-
 /** Collection nodes are flow origins: the root of a request tree.
  *  Requests are added from them (and branch from each other), and every
- *  request wired under an origin belongs to that collection. */
+ *  request wired under an origin belongs to that collection. The origin
+ *  also carries the environment its whole tree runs under. */
 export interface CollectionNodeData extends Record<string, unknown> {
   collectionId: string;
+  /** Environment for the tree; null/undefined = the active environment. */
+  environmentId?: string | null;
 }
 
 /**
@@ -75,10 +72,9 @@ export interface AssertNodeData extends Record<string, unknown> {
 }
 
 export type RequestNode = Node<RequestNodeData, "request">;
-export type EnvNode = Node<EnvNodeData, "env">;
 export type CollectionNode = Node<CollectionNodeData, "collection">;
 export type AssertNode = Node<AssertNodeData, "assert">;
-export type CanvasNode = RequestNode | EnvNode | CollectionNode | AssertNode;
+export type CanvasNode = RequestNode | CollectionNode | AssertNode;
 export type BindingEdge = Edge<BindingEdgeData>;
 
 export interface CanvasGraph {

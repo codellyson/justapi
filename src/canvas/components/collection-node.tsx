@@ -1,10 +1,20 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bookmark, Trash2, Plus, Play } from "lucide-react";
+import {
+  Bookmark,
+  Trash2,
+  Plus,
+  Play,
+  Globe,
+  ChevronDown,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useCollectionsStore } from "../use-collections-store";
+import { useEnvironmentStore } from "../../stores/use-environment-store";
 import type {
   CollectionNode as CollectionNodeType,
   CollectionNodeData,
@@ -23,17 +33,49 @@ const BRANCH_Y_GAP = 150;
  */
 export const CollectionNodeCard = memo(
   ({ id, data }: NodeProps<CollectionNodeType>) => {
-    const { collectionId } = data as CollectionNodeData;
+    const { collectionId, environmentId } = data as CollectionNodeData;
     const collections = useCollectionsStore((s) => s.collections);
+    const environments = useEnvironmentStore((s) => s.environments);
+    const activeEnvironmentId = useEnvironmentStore(
+      (s) => s.activeEnvironmentId
+    );
+    const updateEnvironment = useEnvironmentStore((s) => s.updateEnvironment);
     const updateNodeData = useCanvasStore((s) => s.updateNodeData);
     const removeNode = useCanvasStore((s) => s.removeNode);
     const addLinkedRequest = useCanvasStore((s) => s.addLinkedRequest);
     const graph = useActiveGraph();
     const run = useRunStore((s) => s.runs[id]) ?? idleRun;
 
+    const [envOpen, setEnvOpen] = useState(false);
+    const [newVar, setNewVar] = useState("");
+
     const collection = collections.find((c) => c.id === collectionId);
     const running = run.status === "pending";
     const outgoing = graph.edges.filter((e) => e.source === id).length;
+
+    // The environment this tree runs under: the origin's own pick, or
+    // the app's active environment as the fallback.
+    const effectiveEnvId = environmentId ?? activeEnvironmentId;
+    const env = environments.find((e) => e.id === effectiveEnvId) ?? null;
+
+    const setVar = (key: string, value: string) => {
+      if (!env) return;
+      updateEnvironment(env.id, {
+        variables: { ...env.variables, [key]: value },
+      });
+    };
+    const removeVar = (key: string) => {
+      if (!env) return;
+      const vars = { ...env.variables };
+      delete vars[key];
+      updateEnvironment(env.id, { variables: vars });
+    };
+    const addVar = () => {
+      const k = newVar.trim();
+      if (!k || !env) return;
+      setVar(k, "");
+      setNewVar("");
+    };
 
     const addRequest = () => {
       const s = useCanvasStore.getState();
@@ -96,6 +138,96 @@ export const CollectionNodeCard = memo(
           >
             <Trash2 className="h-3 w-3" />
           </button>
+        </div>
+
+        {/* environment: scopes the whole tree */}
+        <div className="border-b border-border/40">
+          <div className="flex items-center gap-1.5 px-3 py-1.5">
+            <button
+              type="button"
+              onClick={() => setEnvOpen((o) => !o)}
+              className="nodrag flex items-center gap-1 text-muted hover:text-primary"
+              title="Environment for this flow's variables"
+            >
+              {envOpen ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+              <Globe className="h-3 w-3 text-success" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+                env
+              </span>
+            </button>
+            <select
+              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[10px] text-secondary outline-none"
+              value={environmentId ?? ""}
+              onChange={(e) =>
+                updateNodeData(id, { environmentId: e.target.value || null })
+              }
+            >
+              <option value="">
+                active
+                {env && !environmentId ? ` (${env.name.toLowerCase()})` : ""}
+              </option>
+              {environments.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {envOpen && env && (
+            <div className="space-y-1 px-3 pb-2">
+              {Object.entries(env.variables).map(([k, v]) => (
+                <div key={k} className="flex items-center gap-1">
+                  <span
+                    className="max-w-[70px] shrink-0 truncate font-mono text-[10px] text-secondary"
+                    title={k}
+                  >
+                    {k}
+                  </span>
+                  <input
+                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60"
+                    defaultValue={v}
+                    onBlur={(e) => setVar(k, e.target.value)}
+                    spellCheck={false}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeVar(k)}
+                    className="nodrag p-0.5 text-muted/50 hover:text-danger"
+                    title={`Remove ${k}`}
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="flex items-center gap-1">
+                <input
+                  className="nodrag min-w-0 flex-1 rounded border border-dashed border-border/40 bg-transparent px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                  placeholder="new variable"
+                  value={newVar}
+                  onChange={(e) => setNewVar(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") addVar();
+                  }}
+                  spellCheck={false}
+                />
+                <button
+                  type="button"
+                  onClick={addVar}
+                  className={cn(
+                    "nodrag rounded p-0.5",
+                    newVar.trim() ? "text-accent hover:bg-accent/10" : "text-muted/40"
+                  )}
+                  title="Add variable"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* grow the tree */}

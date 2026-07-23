@@ -17,7 +17,6 @@ import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
 import { RequestNodeCard } from "./request-node";
-import { EnvNodeCard } from "./env-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
 import { BindingEdgeView } from "./binding-edge";
@@ -31,7 +30,6 @@ import { ThemeToggle } from "../../components/ui/theme-toggle";
 // Constant identity — React Flow warns (and re-mounts nodes) otherwise.
 const nodeTypes = {
   request: RequestNodeCard,
-  env: EnvNodeCard,
   collection: CollectionNodeCard,
   assert: AssertNodeCard,
 };

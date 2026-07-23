@@ -10,7 +10,7 @@ import type {
   CanvasGraph,
   CanvasNode,
   RequestNodeData,
-  EnvNodeData,
+  CollectionNodeData,
   AssertNodeData,
   BindingEdgeData,
 } from "./types";
@@ -111,8 +111,34 @@ export const downstreamOrder = (
 };
 
 /**
+ * Walk upstream from a node to the flow origin it belongs to, if any.
+ */
+export const findOrigin = (
+  nodeId: string,
+  g: CanvasGraph
+): CanvasNode | null => {
+  const visited = new Set<string>([nodeId]);
+  const queue = [nodeId];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const e of g.edges) {
+      if (e.target !== cur) continue;
+      const src = nodeById(g, e.source);
+      if (!src || visited.has(src.id)) continue;
+      if (src.type === "collection") return src;
+      if (src.type === "request") {
+        visited.add(src.id);
+        queue.push(src.id);
+      }
+    }
+  }
+  return null;
+};
+
+/**
  * Variables visible to a node, lowest precedence first:
- * active environment → connected env nodes → incoming variable bindings.
+ * active environment → the tree origin's environment → incoming
+ * variable bindings.
  */
 export const collectVariables = (
   nodeId: string,
@@ -122,15 +148,16 @@ export const collectVariables = (
     ...(useEnvironmentStore.getState().getActiveEnvironment()?.variables ?? {}),
   };
 
-  const envs = useEnvironmentStore.getState().environments;
   const runs = useRunStore.getState().runs;
 
-  for (const e of g.edges) {
-    if (e.target !== nodeId) continue;
-    const source = nodeById(g, e.source);
-    if (source?.type === "env") {
-      const envId = (source.data as EnvNodeData).environmentId;
-      const env = envs.find((x) => x.id === envId);
+  // The origin's environment scopes its whole tree.
+  const origin = findOrigin(nodeId, g);
+  if (origin) {
+    const envId = (origin.data as CollectionNodeData).environmentId;
+    if (envId) {
+      const env = useEnvironmentStore
+        .getState()
+        .environments.find((x) => x.id === envId);
       if (env) Object.assign(vars, env.variables);
     }
   }

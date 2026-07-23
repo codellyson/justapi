@@ -73,9 +73,6 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
     if (isAssert) {
       return `rgb(var(--warning) / ${active ? 0.8 : 0.45})`;
     }
-    if (sourceNode?.type === "env") {
-      return `rgb(var(--success) / ${active ? 0.9 : 0.5})`;
-    }
     if (sourceNode?.type === "collection") {
       return `rgb(var(--accent) / ${active ? 0.8 : 0.4})`;
     }
@@ -90,7 +87,7 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
   }, [sourceNode, isAssert, selected, inspected, flowing]);
 
   const label = !binding
-    ? "env"
+    ? null
     : binding.targetName
     ? binding.targetKind === "variable"
       ? `${binding.sourcePath} → {{${binding.targetName}}}`
@@ -109,8 +106,8 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
           strokeDasharray: flowing ? "6 4" : isSpawn ? "5 4" : undefined,
         }}
       />
-      {/* Spawn edges are provenance, not data flow — no label chip. */}
-      {!isSpawn && (
+      {/* Structural edges (origin spawns, assert grades) carry no label. */}
+      {!isSpawn && label !== null && (
       <EdgeLabelRenderer>
         <div
           className="absolute pointer-events-auto nodrag nopan"
@@ -120,18 +117,16 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
         >
           <button
             type="button"
-            onClick={() => binding && setInspectedEdge(inspected ? null : id)}
+            onClick={() => setInspectedEdge(inspected ? null : id)}
             className={cn(
               "px-1.5 py-0.5 rounded-md border font-mono text-[10px] backdrop-blur-sm transition-colors max-w-[220px] truncate block",
-              !binding
-                ? "border-success/40 bg-bg-secondary/90 text-success cursor-default"
-                : inspected || selected
+              inspected || selected
                 ? "border-accent/70 bg-accent/10 text-accent"
-                : binding.targetName
+                : binding?.targetName
                 ? "border-border/60 bg-bg-secondary/90 text-secondary hover:text-primary hover:border-accent/50"
                 : "border-warning/50 bg-bg-secondary/90 text-warning hover:border-warning"
             )}
-            title={binding ? "Edit binding" : "Environment connection"}
+            title="Edit binding"
           >
             {label}
           </button>

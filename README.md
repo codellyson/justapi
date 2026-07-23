@@ -48,11 +48,11 @@ pnpm start
 - **Binding edge** — connect node A → node B and pick a value from A's response
   (`data.token`, `status`, `headers.etag`); it feeds B as a `{{variable}}` or a header.
   Running B runs its upstream chain first (topological order, cycles rejected).
-- **Env node** — an environment's variables on the canvas; connect it to requests
-  that should use it. Precedence: edge bindings > env-node vars > active environment.
 - **Origin node** — the root of a flow tree, named after a collection. Requests
   are added from it and branch off each other; every request in the tree shows a
   membership badge. ▶ on the origin runs the whole tree in dependency order.
+  The origin also carries the tree's environment (expandable variable editor);
+  precedence: edge bindings > origin env > active environment.
 - **Assert node** — hangs off a request and grades its response
   (`status = 200`, `data.id exists`, contains/>/<). Checks evaluate live as
   responses arrive, and the flow verdict counts them: "4 passed · 2 checks ✓".

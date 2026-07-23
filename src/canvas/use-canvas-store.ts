@@ -19,8 +19,8 @@ import type {
   BindingEdge,
   RequestNode,
   RequestNodeData,
-  EnvNodeData,
   CollectionNodeData,
+  AssertNodeData,
   BindingEdgeData,
 } from "./types";
 
@@ -76,7 +76,6 @@ interface CanvasState {
   addRequestNodes: (
     items: { position: XYPosition; snapshot: CardRequestSnapshot; name: string }[]
   ) => void;
-  addEnvNode: (position: XYPosition, environmentId: string) => string;
   addCollectionNode: (position: XYPosition, collectionId: string) => string;
   /** Add a new blank request node wired from a source node — how a flow
    *  tree grows from its origin (and branches from its requests). */
@@ -87,8 +86,8 @@ interface CanvasState {
     id: string,
     patch:
       | Partial<RequestNodeData>
-      | Partial<EnvNodeData>
       | Partial<CollectionNodeData>
+      | Partial<AssertNodeData>
   ) => void;
   updateSnapshot: (id: string, patch: Partial<CardRequestSnapshot>) => void;
   updateEdgeData: (id: string, patch: Partial<BindingEdgeData>) => void;
@@ -174,12 +173,10 @@ export const useCanvasStore = create<CanvasState>()(
         if (connection.source === connection.target) return;
         const sourceNode = g.nodes.find((n) => n.id === connection.source);
         const targetNode = g.nodes.find((n) => n.id === connection.target);
-        // Env/collection sources and assert targets carry no binding data
-        // — those edges express structure, not value flow.
+        // Origin sources and assert targets carry no binding data —
+        // those edges express structure, not value flow.
         const silent =
-          sourceNode?.type === "env" ||
-          sourceNode?.type === "collection" ||
-          targetNode?.type === "assert";
+          sourceNode?.type === "collection" || targetNode?.type === "assert";
         const edge: BindingEdge = {
           id: uid(),
           source: connection.source,
@@ -223,17 +220,6 @@ export const useCanvasStore = create<CanvasState>()(
         }));
         set((s) => withActive(s, (g) => ({ nodes: [...g.nodes, ...nodes] })));
       },
-      addEnvNode: (position, environmentId) => {
-        const id = uid();
-        const node: CanvasNode = {
-          id,
-          type: "env",
-          position,
-          data: { environmentId },
-        };
-        set((s) => withActive(s, (g) => ({ nodes: [...g.nodes, node] })));
-        return id;
-      },
       addCollectionNode: (position, collectionId) => {
         const id = uid();
         const node: CanvasNode = {
@@ -257,10 +243,9 @@ export const useCanvasStore = create<CanvasState>()(
           position,
           data: { name: "", snapshot: emptySnapshot(), collapsed: false },
         };
-        // Origin/env sources wire silently; request sources get a binding
+        // Origin sources wire silently; request sources get a binding
         // shell to fill in later (no inspector popup — the node is blank).
-        const silent =
-          source.type === "env" || source.type === "collection";
+        const silent = source.type === "collection";
         const edge: BindingEdge = {
           id: uid(),
           source: sourceNodeId,
@@ -370,7 +355,27 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: "justapi-canvas",
-      version: 1,
+      version: 2,
+      // v2: environments moved onto the origin node — standalone env
+      // nodes (and their edges) are stripped from persisted graphs.
+      migrate: (persisted, version) => {
+        const state = persisted as Pick<CanvasState, "graphs" | "activeGraphId">;
+        if (version < 2 && state?.graphs) {
+          for (const g of Object.values(state.graphs)) {
+            const envIds = new Set(
+              g.nodes
+                .filter((n) => (n.type as string) === "env")
+                .map((n) => n.id)
+            );
+            if (envIds.size === 0) continue;
+            g.nodes = g.nodes.filter((n) => !envIds.has(n.id));
+            g.edges = g.edges.filter(
+              (e) => !envIds.has(e.source) && !envIds.has(e.target)
+            );
+          }
+        }
+        return state;
+      },
       partialize: (s) => ({
         graphs: s.graphs,
         activeGraphId: s.activeGraphId,

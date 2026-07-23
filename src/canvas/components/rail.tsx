@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import {
   Plus,
-  Globe,
   Import,
   Bookmark,
   Layers,
@@ -14,7 +13,6 @@ import {
   Eraser,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { useCanvasStore } from "../use-canvas-store";
 
 interface RailProps {
@@ -34,7 +32,6 @@ const railBtn =
 export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) => {
   const { screenToFlowPosition } = useReactFlow();
   const addRequestNode = useCanvasStore((s) => s.addRequestNode);
-  const addEnvNode = useCanvasStore((s) => s.addEnvNode);
   const graphs = useCanvasStore((s) => s.graphs);
   const activeGraphId = useCanvasStore((s) => s.activeGraphId);
   const setActiveGraph = useCanvasStore((s) => s.setActiveGraph);
@@ -70,18 +67,6 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
         title="New request node"
       >
         <Plus className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          const envs = useEnvironmentStore.getState();
-          const envId = envs.activeEnvironmentId ?? envs.environments[0]?.id;
-          if (envId) addEnvNode(centerPosition(), envId);
-        }}
-        className={railBtn}
-        title="New environment node"
-      >
-        <Globe className="h-4 w-4" />
       </button>
       <button
         type="button"

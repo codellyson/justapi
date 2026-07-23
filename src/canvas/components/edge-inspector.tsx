@@ -8,10 +8,44 @@ import type { BindingEdgeData } from "../types";
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
 import { useRunStore } from "../use-run-store";
 
+interface Leaf {
+  path: string;
+  value: unknown;
+}
+
+const LEAF_CAP = 60;
+
+/** Flatten a response payload into pickable `data.x[0].y` leaf paths. */
+const collectLeaves = (value: unknown, prefix: string, out: Leaf[]): void => {
+  if (out.length >= LEAF_CAP) return;
+  if (value === null || typeof value !== "object") {
+    out.push({ path: prefix, value });
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      if (out.length >= LEAF_CAP) return;
+      collectLeaves(value[i], `${prefix}[${i}]`, out);
+    }
+    return;
+  }
+  for (const [k, v] of Object.entries(value)) {
+    if (out.length >= LEAF_CAP) return;
+    collectLeaves(v, `${prefix}.${k}`, out);
+  }
+};
+
+/** Last meaningful segment of a path, for auto-naming the variable. */
+const lastSegment = (path: string): string => {
+  const m = path.match(/\.?([A-Za-z_$][\w$]*)(?:\[\d+\])*$/);
+  return m ? m[1] : "";
+};
+
 /**
  * Popover anchored under the edge label: edit the extraction path, the
  * binding kind (variable vs header), and the target name — with a live
- * preview of the extracted value when the source has a cached response.
+ * preview of the extracted value when the source has a cached response,
+ * and a click-to-pick list of the response's fields.
  */
 export const EdgeInspector = ({ edgeId }: { edgeId: string }) => {
   const graph = useActiveGraph();
@@ -32,6 +66,25 @@ export const EdgeInspector = ({ edgeId }: { edgeId: string }) => {
     const text = extractedToString(value);
     return { ok: true, text: text.length > 60 ? `${text.slice(0, 60)}…` : text };
   }, [data, sourceRun]);
+
+  const leaves = useMemo(() => {
+    const body = sourceRun?.response?.data;
+    if (body === undefined || body instanceof ArrayBuffer) return [];
+    const out: Leaf[] = [];
+    collectLeaves(body, "data", out);
+    return out;
+  }, [sourceRun]);
+
+  const pick = (leaf: Leaf) => {
+    updateEdgeData(edgeId, {
+      sourcePath: leaf.path,
+      // Auto-name the variable after the picked field unless the user
+      // already chose a name.
+      ...(data && !data.targetName
+        ? { targetName: lastSegment(leaf.path) }
+        : {}),
+    });
+  };
 
   if (!edge || !data) return null;
 
@@ -91,7 +144,37 @@ export const EdgeInspector = ({ edgeId }: { edgeId: string }) => {
         )}
         {!sourceRun?.response && (
           <div className="px-2 py-1 rounded-md border border-border/40 text-[10px] text-muted">
-            run the source node to preview
+            run the source node to preview &amp; pick fields
+          </div>
+        )}
+        {leaves.length > 0 && (
+          <div className="space-y-1">
+            <div className="text-[10px] text-secondary">or pick a field</div>
+            <div className="nowheel nodrag max-h-36 overflow-y-auto rounded-md border border-border/40 bg-bg/40">
+              {leaves.map((leaf) => (
+                <button
+                  key={leaf.path}
+                  type="button"
+                  onClick={() => pick(leaf)}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-2 py-1 text-left font-mono text-[10px] transition-colors hover:bg-bg/70",
+                    data.sourcePath === leaf.path
+                      ? "bg-accent/10 text-accent"
+                      : "text-secondary"
+                  )}
+                >
+                  <span className="truncate">{leaf.path}</span>
+                  <span className="ml-auto max-w-[80px] shrink-0 truncate text-muted/70">
+                    {leaf.value === null ? "null" : String(leaf.value)}
+                  </span>
+                </button>
+              ))}
+              {leaves.length >= LEAF_CAP && (
+                <div className="px-2 py-1 text-[9px] text-muted/70">
+                  first {LEAF_CAP} fields shown — type deeper paths above
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

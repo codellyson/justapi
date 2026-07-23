@@ -63,9 +63,10 @@ JustAPI doubles as the UI an AI agent uses to prove a backend works:
 push a declarative flow spec over HTTP (`POST /api/flows`), watch it
 materialize on the open canvas, run it (`POST /api/flows/:slug/run`),
 and get a machine-readable verdict — while the human supervises the
-tree executing live. An MCP server (`pnpm mcp`) exposes the same as
-native tools for Claude Code and other MCP clients. See
-[docs/agent-api.md](docs/agent-api.md).
+tree executing live. With no canvas connected (CI, background agents)
+runs execute headless server-side with the same report. An MCP server
+(`pnpm mcp`) exposes the same as native tools for Claude Code and
+other MCP clients. See [docs/agent-api.md](docs/agent-api.md).
 
 ## Outgoing requests
 

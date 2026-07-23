@@ -7,8 +7,9 @@
  * Register (Claude Code):
  *   claude mcp add justapi -- node /path/to/justapi/mcp/server.mjs
  *
- * Requires the app running (`pnpm dev`) and the canvas open in a
- * browser — flows execute there so the human watches them run.
+ * Requires the app running (`pnpm dev`). With the canvas open in a
+ * browser, flows execute there so the human watches them run; with no
+ * canvas connected they run headless server-side.
  * Override the app URL with JUSTAPI_URL (default http://localhost:3000).
  */
 
@@ -62,8 +63,10 @@ const server = new McpServer(
     instructions:
       "JustAPI renders API test flows as a visual tree the human watches execute. " +
       "Push a declarative flow spec (auth → … → feature under test), then run it " +
-      "and read the verdict. The app must be running locally with the canvas open " +
-      "in a browser. Prefer push_and_run_flow for a one-shot build-and-verify.\n\n" +
+      "and read the verdict. The app must be running locally (`pnpm dev`). With " +
+      "the canvas open in a browser the run executes live on the board; with no " +
+      "canvas it runs headless server-side — same report either way. Prefer " +
+      "push_and_run_flow for a one-shot build-and-verify.\n\n" +
       SPEC_REFERENCE,
   }
 );

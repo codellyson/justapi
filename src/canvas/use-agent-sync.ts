@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { materializeFlow, findFlowOrigin } from "./materialize";
+import { useCanvasStore } from "./use-canvas-store";
 import { runFlow } from "./engine";
 import { flowSlug } from "./flow-spec";
 import type { FlowSpec } from "./flow-spec";
@@ -49,6 +50,9 @@ export const useAgentSync = (): void => {
               }
             }
             if (!origin) return;
+            // The engine runs against the active graph — front the
+            // flow's board (also puts the run where the human watches).
+            useCanvasStore.getState().setActiveGraph(origin.graphId);
             const report = await runFlow(origin.originId);
             await fetch("/api/agent/results", {
               method: "POST",

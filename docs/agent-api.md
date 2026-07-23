@@ -7,9 +7,11 @@ JustAPI is a canvas where API flows are drawn as trees: an **origin**
 those flows over plain HTTP while a human watches them execute live on
 the canvas.
 
-Requires the app running locally (`pnpm dev`) and the canvas open in a
-browser at `http://localhost:3000` — flows execute *in the browser* so
-the human sees every request light up.
+Requires the app running locally (`pnpm dev`). With the canvas open in
+a browser at `http://localhost:3000`, flows execute *in the browser* so
+the human sees every request light up. With no canvas connected — CI,
+background agents — runs fall back to a headless server-side executor
+with the same semantics and report shape.
 
 ## Push a flow
 
@@ -97,9 +99,12 @@ Returns the report:
 }
 ```
 
-`409` means no canvas is connected (open the app in a browser).
-Requests execute in topological order; failures don't halt the suite —
-they're reported.
+With a canvas connected the run executes live on the board; otherwise
+it runs headless server-side (variables come from the spec's
+`environment`, defaults from `defaults`). The response's `mode` field
+says which happened (`"canvas"` or `"headless"`); force server-side
+with `?mode=headless`. Requests execute in topological order; failures
+don't halt the suite — they're reported.
 
 ## Inspect
 

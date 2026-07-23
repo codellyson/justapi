@@ -45,15 +45,23 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
     const g = s.graphs[s.activeGraphId];
     return g?.nodes.find((n) => n.id === source);
   });
+  const targetType = useCanvasStore((s) => {
+    const g = s.graphs[s.activeGraphId];
+    return g?.nodes.find((n) => n.id === props.target)?.type;
+  });
   const binding = data as BindingEdgeData | undefined;
   const inspected = inspectedEdgeId === id;
 
   // Wires inherit the source's identity: host hue for request nodes,
-  // success green for env nodes, dashed accent for collection spawns.
-  // Brighter when selected/inspected.
-  const isSpawn = sourceNode?.type === "collection";
+  // success green for env nodes, dashed accent for collection spawns,
+  // dashed amber into assert nodes. Brighter when selected/inspected.
+  const isAssert = targetType === "assert";
+  const isSpawn = sourceNode?.type === "collection" || isAssert;
   const stroke = useMemo(() => {
     const active = selected || inspected;
+    if (isAssert) {
+      return `rgb(var(--warning) / ${active ? 0.8 : 0.45})`;
+    }
     if (sourceNode?.type === "env") {
       return `rgb(var(--success) / ${active ? 0.9 : 0.5})`;
     }
@@ -68,7 +76,7 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
       }
     }
     return undefined; // fall back to the themed default stroke
-  }, [sourceNode, selected, inspected]);
+  }, [sourceNode, isAssert, selected, inspected]);
 
   const label = !binding
     ? "env"

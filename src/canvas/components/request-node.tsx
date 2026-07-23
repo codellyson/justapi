@@ -11,6 +11,7 @@ import {
   Bookmark,
   Check,
   Plus,
+  ShieldCheck,
 } from "lucide-react";
 import { methodPillColor } from "./method-pill";
 import { JsonView } from "./json-view";
@@ -150,6 +151,7 @@ export const RequestNodeCard = memo(
     const updateNodeData = useCanvasStore((s) => s.updateNodeData);
     const removeNode = useCanvasStore((s) => s.removeNode);
     const addLinkedRequest = useCanvasStore((s) => s.addLinkedRequest);
+    const addAssertNode = useCanvasStore((s) => s.addAssertNode);
 
     // Which flow origin does this request trace back to? Shown as a
     // membership badge in the eyebrow.
@@ -213,6 +215,19 @@ export const RequestNodeCard = memo(
       });
     };
 
+    /** Hang an assert node off this request's response. */
+    const assert = () => {
+      const s = useCanvasStore.getState();
+      const g = s.graphs[s.activeGraphId];
+      const self = g?.nodes.find((n) => n.id === id);
+      if (!self || !g) return;
+      const outgoing = g.edges.filter((e) => e.source === id).length;
+      addAssertNode(id, {
+        x: self.position.x + 420,
+        y: self.position.y + outgoing * 150,
+      });
+    };
+
     const metaChip = (
       section: Exclude<Section, null>,
       label: string,
@@ -267,6 +282,14 @@ export const RequestNodeCard = memo(
           title="Add next request — branches from this one"
         >
           <Plus className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          onClick={assert}
+          className="nodrag absolute -right-9 bottom-9 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-bg-secondary/95 text-secondary opacity-0 shadow-sm backdrop-blur-sm transition-opacity hover:border-warning hover:text-warning group-hover:opacity-100"
+          title="Assert on this response — adds graded checks"
+        >
+          <ShieldCheck className="h-3 w-3" />
         </button>
 
         {/* eyebrow: host identity band */}

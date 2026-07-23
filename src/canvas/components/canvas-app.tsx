@@ -19,6 +19,7 @@ import { loadSharedSnapshot } from "../share";
 import { RequestNodeCard } from "./request-node";
 import { EnvNodeCard } from "./env-node";
 import { CollectionNodeCard } from "./collection-node";
+import { AssertNodeCard } from "./assert-node";
 import { BindingEdgeView } from "./binding-edge";
 import { Rail } from "./rail";
 import { Library } from "./library";
@@ -32,6 +33,7 @@ const nodeTypes = {
   request: RequestNodeCard,
   env: EnvNodeCard,
   collection: CollectionNodeCard,
+  assert: AssertNodeCard,
 };
 const edgeTypes = { binding: BindingEdgeView };
 

@@ -57,10 +57,28 @@ export interface BindingEdgeData extends Record<string, unknown> {
   targetName: string;
 }
 
+export type AssertOp = "exists" | "equals" | "contains" | "gt" | "lt";
+
+export interface AssertCheck {
+  id: string;
+  /** Extraction path into the upstream response: `status`, `data.id`, … */
+  path: string;
+  op: AssertOp;
+  /** Expected value (unused for `exists`). */
+  value: string;
+}
+
+/** Assert nodes hang off a request and grade its response. They evaluate
+ *  live and count toward the flow verdict. */
+export interface AssertNodeData extends Record<string, unknown> {
+  checks: AssertCheck[];
+}
+
 export type RequestNode = Node<RequestNodeData, "request">;
 export type EnvNode = Node<EnvNodeData, "env">;
 export type CollectionNode = Node<CollectionNodeData, "collection">;
-export type CanvasNode = RequestNode | EnvNode | CollectionNode;
+export type AssertNode = Node<AssertNodeData, "assert">;
+export type CanvasNode = RequestNode | EnvNode | CollectionNode | AssertNode;
 export type BindingEdge = Edge<BindingEdgeData>;
 
 export interface CanvasGraph {

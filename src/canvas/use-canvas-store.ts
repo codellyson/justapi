@@ -81,6 +81,8 @@ interface CanvasState {
   /** Add a new blank request node wired from a source node — how a flow
    *  tree grows from its origin (and branches from its requests). */
   addLinkedRequest: (sourceNodeId: string, position: XYPosition) => string;
+  /** Hang an assert node off a request to grade its response. */
+  addAssertNode: (sourceNodeId: string, position: XYPosition) => string;
   updateNodeData: (
     id: string,
     patch:
@@ -171,10 +173,13 @@ export const useCanvasStore = create<CanvasState>()(
         if (!g) return;
         if (connection.source === connection.target) return;
         const sourceNode = g.nodes.find((n) => n.id === connection.source);
-        // Env and collection sources carry no binding data — they mean
-        // "uses this environment" / "spawned from this collection".
+        const targetNode = g.nodes.find((n) => n.id === connection.target);
+        // Env/collection sources and assert targets carry no binding data
+        // — those edges express structure, not value flow.
         const silent =
-          sourceNode?.type === "env" || sourceNode?.type === "collection";
+          sourceNode?.type === "env" ||
+          sourceNode?.type === "collection" ||
+          targetNode?.type === "assert";
         const edge: BindingEdge = {
           id: uid(),
           source: connection.source,
@@ -264,6 +269,35 @@ export const useCanvasStore = create<CanvasState>()(
           data: silent
             ? undefined
             : { sourcePath: "data.", targetKind: "variable", targetName: "" },
+        };
+        set((state) =>
+          withActive(state, (graph) => ({
+            nodes: [...graph.nodes, node],
+            edges: [...graph.edges, edge],
+          }))
+        );
+        return nodeId;
+      },
+      addAssertNode: (sourceNodeId, position) => {
+        const s = get();
+        const g = s.graphs[s.activeGraphId];
+        const source = g?.nodes.find((n) => n.id === sourceNodeId);
+        if (!source || source.type !== "request") return "";
+        const nodeId = uid();
+        const node: CanvasNode = {
+          id: nodeId,
+          type: "assert",
+          position,
+          data: {
+            checks: [{ id: uid(), path: "status", op: "equals", value: "200" }],
+          },
+        };
+        const edge: BindingEdge = {
+          id: uid(),
+          source: sourceNodeId,
+          target: nodeId,
+          type: "binding",
+          data: undefined,
         };
         set((state) =>
           withActive(state, (graph) => ({

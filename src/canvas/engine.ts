@@ -3,6 +3,7 @@
 import { executeRequest } from "./execute-request";
 import { useEnvironmentStore } from "../stores/use-environment-store";
 import { extractFromResponse, extractedToString } from "./get-path";
+import { evaluateChecks } from "./asserts";
 import { useCanvasStore } from "./use-canvas-store";
 import { useRunStore, abortControllers } from "./use-run-store";
 import type {
@@ -10,6 +11,7 @@ import type {
   CanvasNode,
   RequestNodeData,
   EnvNodeData,
+  AssertNodeData,
   BindingEdgeData,
 } from "./types";
 
@@ -276,13 +278,44 @@ export const runFlow = async (sourceId: string): Promise<void> => {
     const ok = await runSingle(id, g);
     if (!ok) failed++;
   }
+
+  // Grade the tree's assert nodes against the fresh responses.
+  const runs = useRunStore.getState().runs;
+  const inFlow = new Set([sourceId, ...result.order]);
+  let checksTotal = 0;
+  let checksFailed = 0;
+  for (const e of g.edges) {
+    if (!inFlow.has(e.source)) continue;
+    const target = nodeById(g, e.target);
+    if (target?.type !== "assert") continue;
+    const checks = (target.data as AssertNodeData).checks;
+    if (checks.length === 0) continue;
+    const { failed: f } = evaluateChecks(
+      checks,
+      runs[e.source]?.response ?? null
+    );
+    checksTotal += checks.length;
+    checksFailed += f;
+    useRunStore
+      .getState()
+      .setSummary(
+        target.id,
+        f === 0 ? `${checks.length} ✓` : `${f} of ${checks.length} failed`,
+        f > 0
+      );
+  }
+
+  const parts: string[] = [];
+  if (failed === 0 && checksFailed === 0) {
+    parts.push(`${result.order.length} passed`);
+    if (checksTotal > 0) parts.push(`${checksTotal} checks ✓`);
+  } else {
+    if (failed > 0) parts.push(`${failed} of ${result.order.length} failed`);
+    else parts.push(`${result.order.length} passed`);
+    if (checksFailed > 0) parts.push(`${checksFailed} checks failed`);
+    else if (checksTotal > 0) parts.push(`${checksTotal} checks ✓`);
+  }
   useRunStore
     .getState()
-    .setSummary(
-      sourceId,
-      failed === 0
-        ? `${result.order.length} passed`
-        : `${failed} of ${result.order.length} failed`,
-      failed > 0
-    );
+    .setSummary(sourceId, parts.join(" · "), failed > 0 || checksFailed > 0);
 };

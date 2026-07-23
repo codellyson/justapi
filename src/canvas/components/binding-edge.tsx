@@ -15,6 +15,7 @@ import type {
   RequestNodeData,
 } from "../types";
 import { useCanvasStore } from "../use-canvas-store";
+import { useRunStore } from "../use-run-store";
 import { EdgeInspector } from "./edge-inspector";
 
 export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
@@ -52,13 +53,23 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
   const binding = data as BindingEdgeData | undefined;
   const inspected = inspectedEdgeId === id;
 
+  // A wire is "carrying" while its target executes (inputs in flight) —
+  // or, for assert edges, while the graded source is still running.
+  const targetPending = useRunStore(
+    (s) => s.runs[props.target]?.status === "pending"
+  );
+  const sourcePending = useRunStore(
+    (s) => s.runs[source]?.status === "pending"
+  );
+
   // Wires inherit the source's identity: host hue for request nodes,
   // success green for env nodes, dashed accent for collection spawns,
   // dashed amber into assert nodes. Brighter when selected/inspected.
   const isAssert = targetType === "assert";
   const isSpawn = sourceNode?.type === "collection" || isAssert;
+  const flowing = targetPending || (isAssert && sourcePending);
   const stroke = useMemo(() => {
-    const active = selected || inspected;
+    const active = selected || inspected || flowing;
     if (isAssert) {
       return `rgb(var(--warning) / ${active ? 0.8 : 0.45})`;
     }
@@ -76,7 +87,7 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
       }
     }
     return undefined; // fall back to the themed default stroke
-  }, [sourceNode, isAssert, selected, inspected]);
+  }, [sourceNode, isAssert, selected, inspected, flowing]);
 
   const label = !binding
     ? "env"
@@ -91,10 +102,11 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
       <BaseEdge
         id={id}
         path={path}
+        className={flowing ? "justapi-edge-flowing" : undefined}
         style={{
           stroke,
-          strokeWidth: selected || inspected ? 2 : 1.5,
-          strokeDasharray: isSpawn ? "5 4" : undefined,
+          strokeWidth: selected || inspected || flowing ? 2 : 1.5,
+          strokeDasharray: flowing ? "6 4" : isSpawn ? "5 4" : undefined,
         }}
       />
       {/* Spawn edges are provenance, not data flow — no label chip. */}

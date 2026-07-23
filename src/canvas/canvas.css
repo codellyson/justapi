@@ -51,6 +51,28 @@
   stroke: rgb(var(--accent));
 }
 
+/* Wires "carry" while their target node is executing: the dash pattern
+   streams from source to target. Dash cycle (6+4) matches the -10 offset
+   so the loop is seamless. */
+@keyframes justapi-flow {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.justapi-canvas .justapi-edge-flowing {
+  animation: justapi-flow 0.45s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .justapi-canvas .justapi-edge-flowing {
+    animation: none;
+  }
+}
+
 .justapi-canvas .react-flow__controls {
   border: 1px solid rgb(var(--border) / 0.6);
   border-radius: 8px;

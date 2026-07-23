@@ -129,12 +129,29 @@ export const materializeFlow = (
   };
   const perDepthCount = new Map<number, number>();
 
+  // Tree-wide defaults ride on the origin (headers under each request's
+  // own; auth for requests that don't set their own).
+  const defaultAuth = spec.defaults?.auth
+    ? authToSnapshot({ auth: spec.defaults.auth } as FlowRequest)
+    : null;
   const nodes: CanvasNode[] = [
     {
       id: originId,
       type: "collection",
       position: originPosition,
-      data: { collectionId: collection.id, environmentId },
+      data: {
+        collectionId: collection.id,
+        environmentId,
+        ...(spec.defaults?.headers
+          ? { headers: { ...spec.defaults.headers } }
+          : {}),
+        ...(defaultAuth
+          ? {
+              authType: defaultAuth.authType,
+              authConfig: defaultAuth.authConfig,
+            }
+          : {}),
+      },
     },
   ];
   const edges: BindingEdge[] = [];

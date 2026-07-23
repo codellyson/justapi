@@ -55,6 +55,12 @@ export interface FlowSpec {
     name: string;
     variables?: Record<string, string>;
   };
+  /** Tree-wide defaults carried by the origin: headers merge under each
+   *  request's own; auth applies to requests that don't set their own. */
+  defaults?: {
+    headers?: Record<string, string>;
+    auth?: FlowAuth | null;
+  };
   requests: FlowRequest[];
 }
 

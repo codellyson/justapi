@@ -59,6 +59,10 @@ Semantics:
 - `name` — the flow/collection/canvas name; its slug is the flow id.
 - `environment` — upserted by name; variables merge. The whole tree
   resolves `{{vars}}` against it.
+- `defaults` — optional tree-wide defaults, carried by the origin:
+  `defaults.headers` merge under each request's own headers, and
+  `defaults.auth` applies to requests that set no auth of their own.
+  Precedence: bound headers > request headers > default headers.
 - `requests[].id` — stable spec-local id (used by `after`, `bindings`,
   and run reports). Upserting the same flow name replaces the tree but
   keeps positions of requests whose ids survive.

@@ -38,11 +38,18 @@ export interface RequestNodeData extends Record<string, unknown> {
 /** Collection nodes are flow origins: the root of a request tree.
  *  Requests are added from them (and branch from each other), and every
  *  request wired under an origin belongs to that collection. The origin
- *  also carries the environment its whole tree runs under. */
+ *  also carries the environment its whole tree runs under, plus default
+ *  headers/auth every request in the tree inherits. */
 export interface CollectionNodeData extends Record<string, unknown> {
   collectionId: string;
   /** Environment for the tree; null/undefined = the active environment. */
   environmentId?: string | null;
+  /** Headers inherited by every request in the tree. A request's own
+   *  header of the same name wins; bound headers win over both. */
+  headers?: Record<string, string>;
+  /** Auth inherited by requests whose own auth is "none". */
+  authType?: AuthType;
+  authConfig?: Record<string, string | undefined>;
 }
 
 /**

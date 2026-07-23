@@ -210,9 +210,29 @@ const runSingle = async (nodeId: string, g: CanvasGraph): Promise<boolean> => {
 
   const variables = collectVariables(nodeId, g);
   const boundHeaders = collectBoundHeaders(nodeId, g);
+  // The tree's origin can carry defaults: its headers sit under the
+  // request's own (which sit under bound headers), and its auth applies
+  // to requests that don't set their own.
+  const originDefaults = findOrigin(nodeId, g)?.data as
+    | CollectionNodeData
+    | undefined;
+  const inheritAuth =
+    data.snapshot.authType === "none" &&
+    originDefaults?.authType &&
+    originDefaults.authType !== "none";
   const snapshot = {
     ...data.snapshot,
-    headers: { ...data.snapshot.headers, ...boundHeaders },
+    headers: {
+      ...(originDefaults?.headers ?? {}),
+      ...data.snapshot.headers,
+      ...boundHeaders,
+    },
+    ...(inheritAuth
+      ? {
+          authType: originDefaults.authType!,
+          authConfig: originDefaults.authConfig ?? {},
+        }
+      : {}),
   };
 
   try {

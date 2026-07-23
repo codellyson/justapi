@@ -29,6 +29,10 @@ const SPEC_REFERENCE = `Flow spec (justapiFlow: 1):
     "name": "local",
     "variables": { "base": "http://localhost:4000" }
   },
+  "defaults": {                                 // optional tree-wide defaults, carried by the origin
+    "headers": { "X-Tenant": "acme" },          // merged UNDER each request's own headers
+    "auth": { "type": "bearer", "token": "{{token}}" }  // for requests that set no auth of their own
+  },
   "requests": [
     {
       "id": "login",                            // stable spec-local id

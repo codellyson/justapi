@@ -1,4 +1,27 @@
-import type { CapturedRequest } from './extension-bridge';
+/** A normalized captured request (formerly shared with the extension
+ *  bridge; inlined here when the debugger UI was removed). */
+export type CapturedRequest = {
+  localId: number;
+  requestId: string;
+  method: string;
+  url: string;
+  requestHeaders: Record<string, string>;
+  requestBody: string;
+  requestHasBody: boolean;
+  status: number;
+  statusText: string;
+  responseHeaders: Record<string, string>;
+  responseBody: string;
+  mimeType: string;
+  resourceType: string;
+  initiator: string;
+  startTime: number;
+  endTime: number;
+  timeMs: number;
+  size: number;
+  failed: boolean;
+  errorText: string;
+};
 
 interface HarHeader {
   name: string;

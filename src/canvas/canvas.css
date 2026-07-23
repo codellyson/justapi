@@ -1,0 +1,101 @@
+/*
+ * React Flow theme bridge. RF ships hardcoded light-theme defaults; every
+ * override below maps onto the app's semantic CSS variables (RGB triplets
+ * set on <html> by ThemeProvider) so the canvas follows all six themes and
+ * dark mode automatically.
+ */
+.justapi-canvas .react-flow {
+  --xy-background-color: rgb(var(--bg));
+  --xy-edge-stroke: rgb(var(--text-muted) / 0.55);
+  --xy-edge-stroke-selected: rgb(var(--accent));
+  --xy-edge-stroke-width: 1.5;
+  --xy-connectionline-stroke: rgb(var(--accent) / 0.7);
+  --xy-handle-background-color: rgb(var(--bg-secondary));
+  --xy-handle-border-color: rgb(var(--text-muted) / 0.8);
+  --xy-selection-background-color: rgb(var(--accent) / 0.06);
+  --xy-selection-border: 1px solid rgb(var(--accent) / 0.5);
+  --xy-attribution-background-color: transparent;
+  --xy-minimap-background-color: rgb(var(--bg-secondary));
+  --xy-background-pattern-dots-color: rgb(var(--border) / 0.85);
+}
+
+/* Jack-socket handles: ring with a hollow center, host-colored on the
+   source side (inline style), scale up when a wire is near. */
+.justapi-canvas .react-flow__handle {
+  width: 11px;
+  height: 11px;
+  border-width: 2px;
+  background: rgb(var(--bg));
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+
+.justapi-canvas .react-flow__handle:hover,
+.justapi-canvas .react-flow__handle.connectionindicator:hover {
+  border-color: rgb(var(--accent));
+  transform: scale(1.25);
+}
+
+.justapi-canvas .react-flow__handle-left {
+  left: -6px;
+}
+
+.justapi-canvas .react-flow__handle-right {
+  right: -6px;
+}
+
+.justapi-canvas .react-flow__node.selected > div {
+  border-color: rgb(var(--accent) / 0.7);
+}
+
+.justapi-canvas .react-flow__edge.selected .react-flow__edge-path {
+  stroke: rgb(var(--accent));
+}
+
+/* Wires "carry" while their target node is executing: the dash pattern
+   streams from source to target. Dash cycle (6+4) matches the -10 offset
+   so the loop is seamless. */
+@keyframes justapi-flow {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.justapi-canvas .justapi-edge-flowing {
+  animation: justapi-flow 0.45s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .justapi-canvas .justapi-edge-flowing {
+    animation: none;
+  }
+}
+
+.justapi-canvas .react-flow__controls {
+  border: 1px solid rgb(var(--border) / 0.6);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 18px -12px rgb(0 0 0 / 0.4);
+}
+
+.justapi-canvas .react-flow__controls-button {
+  background: rgb(var(--bg-secondary));
+  border-bottom: 1px solid rgb(var(--border) / 0.5);
+  color: rgb(var(--text-secondary));
+  width: 24px;
+  height: 24px;
+}
+
+.justapi-canvas .react-flow__controls-button:hover {
+  background: rgb(var(--bg));
+  color: rgb(var(--text-primary));
+}
+
+.justapi-canvas .react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 11px;
+  max-height: 11px;
+}
+

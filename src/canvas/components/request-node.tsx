@@ -16,6 +16,8 @@ import {
 import { methodPillColor } from "./method-pill";
 import { JsonView } from "./json-view";
 import { extractHost, hostAccent } from "../host";
+import { replaceVariables } from "../../utils/variables";
+import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { formatSize } from "../format";
 import { cn } from "../../utils/cn";
 import type { HttpMethod } from "../../utils/http";
@@ -117,11 +119,12 @@ const UrlText = ({ url }: { url: string }) => {
 type Section = "headers" | "body" | "auth" | null;
 
 /** Walk upstream from a node to the flow origin it belongs to (if any)
- *  and return that origin's collection id. */
-const findOriginCollectionId = (
+ *  and return the requested field of that origin's data. */
+const findOriginField = (
   nodes: { id: string; type?: string; data: Record<string, unknown> }[],
   edges: { source: string; target: string }[],
-  nodeId: string
+  nodeId: string,
+  field: "collectionId" | "environmentId"
 ): string | null => {
   const visited = new Set<string>([nodeId]);
   const queue = [nodeId];
@@ -132,7 +135,7 @@ const findOriginCollectionId = (
       const src = nodes.find((n) => n.id === e.source);
       if (!src || visited.has(src.id)) continue;
       if (src.type === "collection") {
-        return (src.data.collectionId as string) ?? null;
+        return (src.data[field] as string) ?? null;
       }
       if (src.type === "request") {
         visited.add(src.id);
@@ -158,13 +161,31 @@ export const RequestNodeCard = memo(
     const originCollectionId = useCanvasStore((s) => {
       const g = s.graphs[s.activeGraphId];
       if (!g) return null;
-      return findOriginCollectionId(g.nodes, g.edges, id);
+      return findOriginField(g.nodes, g.edges, id, "collectionId");
     });
     const originName = useCollectionsStore((s) =>
       originCollectionId
         ? s.collections.find((c) => c.id === originCollectionId)?.name ?? null
         : null
     );
+
+    // Env vars the tree runs under (origin env over active env) — used to
+    // resolve {{vars}} in the URL for display, so a request whose host
+    // lives in a variable still gets its identity band.
+    const originEnvironmentId = useCanvasStore((s) => {
+      const g = s.graphs[s.activeGraphId];
+      if (!g) return null;
+      return findOriginField(g.nodes, g.edges, id, "environmentId");
+    });
+    const displayVars = useEnvironmentStore((s) => {
+      const active =
+        s.environments.find((e) => e.id === s.activeEnvironmentId)
+          ?.variables ?? {};
+      const origin = originEnvironmentId
+        ? s.environments.find((e) => e.id === originEnvironmentId)?.variables
+        : undefined;
+      return JSON.stringify({ ...active, ...(origin ?? {}) });
+    });
 
     const [openSection, setOpenSection] = useState<Section>(null);
     const [editingUrl, setEditingUrl] = useState(!snapshot.urlRaw);
@@ -181,10 +202,21 @@ export const RequestNodeCard = memo(
       setTimeout(() => setSavedFlash(false), 1200);
     };
 
-    const host = extractHost(snapshot.urlRaw || snapshot.url);
+    // Resolve {{vars}} before extracting the host so var-based URLs
+    // ({{base}}/todos/1) keep their hue and eyebrow identity.
+    const host = useMemo(() => {
+      const raw = snapshot.urlRaw || snapshot.url;
+      if (!raw) return "";
+      return extractHost(replaceVariables(raw, JSON.parse(displayVars)));
+    }, [snapshot.urlRaw, snapshot.url, displayVars]);
     const accent = useMemo(() => hostAccent(host), [host]);
     const pending = run.status === "pending";
     const hasHost = host !== "(invalid url)" && host.length > 0;
+    // Unresolvable var-URLs show their leading token ({{base}}…) rather
+    // than pretending the request is new.
+    const eyebrowFallback = snapshot.urlRaw
+      ? snapshot.urlRaw.split("/")[0] || "new request"
+      : "new request";
 
     const cycleMethod = () => {
       const next =
@@ -310,7 +342,7 @@ export const RequestNodeCard = memo(
             className="truncate text-[9px] font-semibold uppercase tracking-[0.16em]"
             style={{ color: hasHost ? accent.stripe : undefined }}
           >
-            {hasHost ? host : "new request"}
+            {hasHost ? host : eyebrowFallback}
           </span>
           <div className="flex-1" />
           {originName && (

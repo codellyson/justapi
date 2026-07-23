@@ -1,0 +1,108 @@
+# JustAPI agent bridge
+
+JustAPI is a canvas where API flows are drawn as trees: an **origin**
+(collection + environment) fans out into **requests**, wires carry
+**bindings** (a value from one response feeding the next request), and
+**asserts** grade responses. This bridge lets an agent build and run
+those flows over plain HTTP while a human watches them execute live on
+the canvas.
+
+Requires the app running locally (`pnpm dev`) and the canvas open in a
+browser at `http://localhost:3000` — flows execute *in the browser* so
+the human sees every request light up.
+
+## Push a flow
+
+`POST /api/flows` (or `PUT /api/flows/:slug`) with a flow spec:
+
+```json
+{
+  "justapiFlow": 1,
+  "name": "todos crud",
+  "environment": {
+    "name": "local",
+    "variables": { "base": "https://jsonplaceholder.typicode.com" }
+  },
+  "requests": [
+    {
+      "id": "login",
+      "method": "POST",
+      "url": "{{base}}/login",
+      "body": { "type": "json", "content": "{\"user\":\"a\"}" },
+      "asserts": [{ "path": "status", "op": "equals", "value": "200" }]
+    },
+    {
+      "id": "read",
+      "method": "GET",
+      "url": "{{base}}/todos/1",
+      "after": "login",
+      "asserts": [
+        { "path": "status", "op": "equals", "value": "200" },
+        { "path": "data.id", "op": "exists" }
+      ]
+    },
+    {
+      "id": "update",
+      "method": "PUT",
+      "url": "{{base}}/todos/{{todoId}}",
+      "body": { "type": "json", "content": "{\"title\":\"x\"}" },
+      "bindings": [
+        { "from": "read", "path": "data.id", "as": "variable", "name": "todoId" }
+      ]
+    }
+  ]
+}
+```
+
+Semantics:
+
+- `name` — the flow/collection/canvas name; its slug is the flow id.
+- `environment` — upserted by name; variables merge. The whole tree
+  resolves `{{vars}}` against it.
+- `requests[].id` — stable spec-local id (used by `after`, `bindings`,
+  and run reports). Upserting the same flow name replaces the tree but
+  keeps positions of requests whose ids survive.
+- Parenting: `bindings[].from` wires a data edge (value extracted at
+  `path` becomes `{{name}}` or a header). `after` sequences without
+  data. Neither → the request hangs off the origin.
+- Paths: `status`, `statusText`, `headers.<name>`, `data.x[0].y`.
+- Assert ops: `exists`, `equals`, `contains`, `gt`, `lt`.
+
+Response: `{ "slug": "todos-crud", "canvasConnected": true, "run": "/api/flows/todos-crud/run" }`.
+The flow materializes on the open canvas immediately.
+
+## Run it
+
+```
+POST /api/flows/:slug/run          # long-polls until done (?timeout=ms, default 60000)
+```
+
+Returns the report:
+
+```json
+{
+  "flow": "todos-crud",
+  "passed": true,
+  "verdict": "3 passed · 3 checks ✓",
+  "requests": [
+    { "id": "read", "ok": true, "status": 200, "time": 185, "error": null }
+  ],
+  "checks": [
+    { "request": "read", "path": "data.id", "op": "exists", "pass": true, "actual": "1" }
+  ]
+}
+```
+
+`409` means no canvas is connected (open the app in a browser).
+Requests execute in topological order; failures don't halt the suite —
+they're reported.
+
+## Inspect
+
+```
+GET /api/flows                     # list flows
+GET /api/flows/:slug               # spec + last run report
+```
+
+Flows persist under `.justapi/flows/*.json` — editing those files and
+re-`POST`ing works too, so file-only agents need nothing but curl.

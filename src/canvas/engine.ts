@@ -278,25 +278,67 @@ export const runNode = async (
 export const runChain = (nodeId: string): Promise<void> =>
   runNode(nodeId, { force: true });
 
+export interface FlowReport {
+  startedAt: number;
+  finishedAt: number;
+  passed: boolean;
+  verdict: string;
+  requests: {
+    id: string;
+    name: string;
+    method: string;
+    url: string;
+    ok: boolean;
+    status: number | null;
+    time: number | null;
+    error: string | null;
+  }[];
+  checks: {
+    request: string;
+    path: string;
+    op: string;
+    value?: string;
+    pass: boolean;
+    actual: string;
+  }[];
+}
+
 /**
  * Run a flow from its source node: execute every request reachable
  * downstream, in topological order, continuing past failures (a test
  * suite reports failures rather than stopping at the first one). The
- * source node's run record carries the suite summary.
+ * source node's run record carries the suite summary; the returned
+ * report is the machine-readable version for agents.
  */
-export const runFlow = async (sourceId: string): Promise<void> => {
+export const runFlow = async (sourceId: string): Promise<FlowReport> => {
+  const startedAt = Date.now();
+  const report: FlowReport = {
+    startedAt,
+    finishedAt: startedAt,
+    passed: false,
+    verdict: "",
+    requests: [],
+    checks: [],
+  };
+  const done = (verdict: string, passed: boolean): FlowReport => {
+    report.finishedAt = Date.now();
+    report.verdict = verdict;
+    report.passed = passed;
+    return report;
+  };
+
   const g = activeGraph();
-  if (!g) return;
+  if (!g) return done("no active canvas", false);
 
   const store = useRunStore.getState();
   const result = downstreamOrder(sourceId, g);
   if ("cycle" in result) {
     store.setSummary(sourceId, "cycle detected in flow", true);
-    return;
+    return done("cycle detected in flow", false);
   }
   if (result.order.length === 0) {
     store.setSummary(sourceId, "nothing wired to this flow", true);
-    return;
+    return done("nothing wired to this flow", false);
   }
 
   store.setPending(sourceId);
@@ -304,6 +346,19 @@ export const runFlow = async (sourceId: string): Promise<void> => {
   for (const id of result.order) {
     const ok = await runSingle(id, g);
     if (!ok) failed++;
+    const node = nodeById(g, id);
+    const data = node?.data as RequestNodeData | undefined;
+    const run = useRunStore.getState().runs[id];
+    report.requests.push({
+      id: data?.specId ?? id,
+      name: data?.name ?? "",
+      method: data?.snapshot.method ?? "",
+      url: data?.snapshot.urlRaw ?? "",
+      ok,
+      status: run?.response?.status ?? null,
+      time: run?.response?.time ?? null,
+      error: run?.error ?? null,
+    });
   }
 
   // Grade the tree's assert nodes against the fresh responses.
@@ -317,10 +372,23 @@ export const runFlow = async (sourceId: string): Promise<void> => {
     if (target?.type !== "assert") continue;
     const checks = (target.data as AssertNodeData).checks;
     if (checks.length === 0) continue;
-    const { failed: f } = evaluateChecks(
+    const sourceData = nodeById(g, e.source)?.data as
+      | RequestNodeData
+      | undefined;
+    const { results, failed: f } = evaluateChecks(
       checks,
       runs[e.source]?.response ?? null
     );
+    checks.forEach((c, i) => {
+      report.checks.push({
+        request: sourceData?.specId ?? e.source,
+        path: c.path,
+        op: c.op,
+        value: c.op === "exists" ? undefined : c.value,
+        pass: results[i].pass,
+        actual: results[i].actual,
+      });
+    });
     checksTotal += checks.length;
     checksFailed += f;
     useRunStore
@@ -342,7 +410,8 @@ export const runFlow = async (sourceId: string): Promise<void> => {
     if (checksFailed > 0) parts.push(`${checksFailed} checks failed`);
     else if (checksTotal > 0) parts.push(`${checksTotal} checks ✓`);
   }
-  useRunStore
-    .getState()
-    .setSummary(sourceId, parts.join(" · "), failed > 0 || checksFailed > 0);
+  const verdict = parts.join(" · ");
+  const passed = failed === 0 && checksFailed === 0;
+  useRunStore.getState().setSummary(sourceId, verdict, !passed);
+  return done(verdict, passed);
 };

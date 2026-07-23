@@ -16,6 +16,7 @@ import "../canvas.css";
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
+import { useAgentSync } from "../use-agent-sync";
 import { RequestNodeCard } from "./request-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
@@ -47,6 +48,10 @@ const CanvasInner = () => {
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { screenToFlowPosition } = useReactFlow();
+
+  // Agents push flows and run requests through the local bridge; this
+  // browser is where they materialize and execute.
+  useAgentSync();
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => setSelectedNodeId(node.id),

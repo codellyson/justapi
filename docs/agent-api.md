@@ -106,3 +106,18 @@ GET /api/flows/:slug               # spec + last run report
 
 Flows persist under `.justapi/flows/*.json` — editing those files and
 re-`POST`ing works too, so file-only agents need nothing but curl.
+
+## MCP
+
+`mcp/server.mjs` wraps this API as an MCP server (stdio). Register it
+with any MCP client — Claude Code:
+
+```
+claude mcp add justapi -- node /path/to/justapi/mcp/server.mjs
+```
+
+Tools: `push_flow`, `run_flow`, `push_and_run_flow`, `get_flow`,
+`list_flows`. The flow-spec reference ships inside the tool
+descriptions, so agents can author flows without reading this file.
+Point at a non-default app URL with `JUSTAPI_URL`.
+

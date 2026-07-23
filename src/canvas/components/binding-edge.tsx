@@ -9,13 +9,17 @@ import {
 } from "@xyflow/react";
 import { cn } from "../../utils/cn";
 import { extractHost, hostAccent } from "../host";
+import { replaceVariables } from "../../utils/variables";
+import { useEnvironmentStore } from "../../stores/use-environment-store";
 import type {
   BindingEdge as BindingEdgeType,
   BindingEdgeData,
   RequestNodeData,
+  CollectionNodeData,
 } from "../types";
 import { useCanvasStore } from "../use-canvas-store";
 import { useRunStore } from "../use-run-store";
+import { findOrigin } from "../engine";
 import { EdgeInspector } from "./edge-inspector";
 
 export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
@@ -62,9 +66,30 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
     (s) => s.runs[source]?.status === "pending"
   );
 
+  // Env vars scoping the source's tree — so a var-based host
+  // ({{base}}/todos) still yields the right hue for its wires.
+  const originEnvironmentId = useCanvasStore((s) => {
+    if (sourceNode?.type !== "request") return null;
+    const g = s.graphs[s.activeGraphId];
+    if (!g) return null;
+    const origin = findOrigin(source, g);
+    return origin
+      ? (origin.data as CollectionNodeData).environmentId ?? null
+      : null;
+  });
+  const displayVars = useEnvironmentStore((s) => {
+    const active =
+      s.environments.find((e) => e.id === s.activeEnvironmentId)?.variables ??
+      {};
+    const origin = originEnvironmentId
+      ? s.environments.find((e) => e.id === originEnvironmentId)?.variables
+      : undefined;
+    return JSON.stringify({ ...active, ...(origin ?? {}) });
+  });
+
   // Wires inherit the source's identity: host hue for request nodes,
-  // success green for env nodes, dashed accent for collection spawns,
-  // dashed amber into assert nodes. Brighter when selected/inspected.
+  // dashed accent for origin spawns, dashed amber into assert nodes.
+  // Brighter when selected/inspected.
   const isAssert = targetType === "assert";
   const isSpawn = sourceNode?.type === "collection" || isAssert;
   const flowing = targetPending || (isAssert && sourcePending);
@@ -78,13 +103,16 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
     }
     if (sourceNode?.type === "request") {
       const d = sourceNode.data as RequestNodeData;
-      const host = extractHost(d.snapshot.urlRaw || d.snapshot.url);
+      const raw = d.snapshot.urlRaw || d.snapshot.url;
+      const host = raw
+        ? extractHost(replaceVariables(raw, JSON.parse(displayVars)))
+        : "";
       if (host && host !== "(invalid url)") {
         return `hsl(${hostAccent(host).hue} 70% 55% / ${active ? 0.95 : 0.6})`;
       }
     }
     return undefined; // fall back to the themed default stroke
-  }, [sourceNode, isAssert, selected, inspected, flowing]);
+  }, [sourceNode, isAssert, selected, inspected, flowing, displayVars]);
 
   const label = !binding
     ? null

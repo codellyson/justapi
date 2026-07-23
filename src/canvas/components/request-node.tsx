@@ -256,11 +256,14 @@ export const RequestNodeCard = memo(
           style={hasHost ? { borderColor: accent.stripe } : undefined}
         />
 
-        {/* branch: add the next request in the chain */}
+        {/* branch: add the next request in the chain. Anchored at the
+            bottom-right corner, OFF the horizontal centerline — wires and
+            their bind labels travel along the center, and the button used
+            to sit exactly where labels land when nodes are close. */}
         <button
           type="button"
           onClick={branch}
-          className="nodrag absolute -right-9 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-border/60 bg-bg-secondary/95 text-secondary opacity-0 shadow-sm backdrop-blur-sm transition-opacity hover:border-accent hover:text-accent group-hover:opacity-100"
+          className="nodrag absolute -right-9 bottom-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-border/60 bg-bg-secondary/95 text-secondary opacity-0 shadow-sm backdrop-blur-sm transition-opacity hover:border-accent hover:text-accent group-hover:opacity-100"
           title="Add next request — branches from this one"
         >
           <Plus className="h-3 w-3" />

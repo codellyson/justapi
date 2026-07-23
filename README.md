@@ -57,6 +57,16 @@ pnpm start
   (`status = 200`, `data.id exists`, contains/>/<). Checks evaluate live as
   responses arrive, and the flow verdict counts them: "4 passed · 2 checks ✓".
 
+## Agents
+
+JustAPI doubles as the UI an AI agent uses to prove a backend works:
+push a declarative flow spec over HTTP (`POST /api/flows`), watch it
+materialize on the open canvas, run it (`POST /api/flows/:slug/run`),
+and get a machine-readable verdict — while the human supervises the
+tree executing live. An MCP server (`pnpm mcp`) exposes the same as
+native tools for Claude Code and other MCP clients. See
+[docs/agent-api.md](docs/agent-api.md).
+
 ## Outgoing requests
 
 The browser calls `/api/proxy`, which forwards to the target URL server-side.

@@ -30,6 +30,9 @@ export interface RequestNodeData extends Record<string, unknown> {
   name: string;
   snapshot: CardRequestSnapshot;
   collapsed: boolean;
+  /** Spec-local id when this node was materialized from a flow spec —
+   *  keeps agent upserts idempotent and run reports addressable. */
+  specId?: string;
 }
 
 /** Collection nodes are flow origins: the root of a request tree.

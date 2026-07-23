@@ -2,10 +2,10 @@
 
 import { useMemo } from "react";
 import { useReactFlow, useViewport } from "@xyflow/react";
-import { Minus, Plus, Maximize2 } from "lucide-react";
+import { Minus, Plus, Maximize2, LayoutGrid } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
-import { useActiveGraph } from "../use-canvas-store";
+import { useActiveGraph, useCanvasStore } from "../use-canvas-store";
 import { useRunStore } from "../use-run-store";
 import { formatSize } from "../format";
 import type { RequestNodeData } from "../types";
@@ -39,6 +39,12 @@ export const StatusBar = () => {
   );
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { zoom } = useViewport();
+  const tidyGraph = useCanvasStore((s) => s.tidyGraph);
+
+  const tidy = () => {
+    tidyGraph();
+    void fitView({ padding: 0.2, duration: 350 });
+  };
 
   const latest = useMemo(() => {
     let best: { nodeId: string; finishedAt: number } | null = null;
@@ -100,6 +106,14 @@ export const StatusBar = () => {
       </span>
 
       <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={tidy}
+          className="rounded p-1 text-secondary hover:text-primary hover:bg-bg/60"
+          title="Tidy — auto-arrange the tree"
+        >
+          <LayoutGrid className="h-3 w-3" />
+        </button>
         <button
           type="button"
           onClick={() => void zoomOut({ duration: 150 })}

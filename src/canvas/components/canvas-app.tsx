@@ -9,11 +9,13 @@ import {
   useReactFlow,
   type NodeMouseHandler,
   type OnConnectEnd,
+  type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "../canvas.css";
 
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
+import { settlePosition } from "../layout";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
 import { useAgentSync } from "../use-agent-sync";
@@ -73,6 +75,36 @@ const CanvasInner = () => {
     [screenToFlowPosition]
   );
 
+  // A node dropped onto another slides to the nearest clear spot —
+  // the board never ends up with nodes stacked on top of each other.
+  // Only the grabbed node is settled; its selection group (if any)
+  // translates by the same delta so relative layout survives.
+  const onNodeDragStop: OnNodeDrag = useCallback((_e, node) => {
+    const state = useCanvasStore.getState();
+    const g = state.graphs[state.activeGraphId];
+    if (!g) return;
+    const current = g.nodes.find((n) => n.id === node.id);
+    if (!current) return;
+    const group = node.selected
+      ? new Set(g.nodes.filter((n) => n.selected).map((n) => n.id))
+      : new Set([node.id]);
+    const others = g.nodes.filter((n) => !group.has(n.id));
+    const pos = settlePosition(others, current.position, current.type);
+    const dx = pos.x - current.position.x;
+    const dy = pos.y - current.position.y;
+    if (dx === 0 && dy === 0) return;
+    state.onNodesChange(
+      g.nodes
+        .filter((n) => group.has(n.id))
+        .map((n) => ({
+          id: n.id,
+          type: "position" as const,
+          position: { x: n.position.x + dx, y: n.position.y + dy },
+          dragging: false,
+        }))
+    );
+  }, []);
+
   // Share links (`/?s=ID`, incl. redirected legacy /playground links):
   // spawn a request node from the shared config and run it.
   useEffect(() => {
@@ -109,6 +141,7 @@ const CanvasInner = () => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
+        onNodeDragStop={onNodeDragStop}
         onNodeClick={onNodeClick}
         onPaneClick={() => {
           setInspectedEdge(null);
@@ -123,7 +156,7 @@ const CanvasInner = () => {
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={22} size={1.5} />
+        <Background variant={BackgroundVariant.Dots} gap={30} size={1} />
       </ReactFlow>
 
       <Rail

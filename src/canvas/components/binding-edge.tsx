@@ -96,10 +96,10 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
   const stroke = useMemo(() => {
     const active = selected || inspected || flowing;
     if (isAssert) {
-      return `rgb(var(--warning) / ${active ? 0.8 : 0.45})`;
+      return `rgb(var(--warning) / ${active ? 0.7 : 0.4})`;
     }
     if (sourceNode?.type === "collection") {
-      return `rgb(var(--accent) / ${active ? 0.8 : 0.4})`;
+      return `rgb(var(--accent) / ${active ? 0.7 : 0.4})`;
     }
     if (sourceNode?.type === "request") {
       const d = sourceNode.data as RequestNodeData;
@@ -108,7 +108,7 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
         ? extractHost(replaceVariables(raw, JSON.parse(displayVars)))
         : "";
       if (host && host !== "(invalid url)") {
-        return `hsl(${hostAccent(host).hue} 70% 55% / ${active ? 0.95 : 0.6})`;
+        return `hsl(${hostAccent(host).hue} 45% 62% / ${active ? 0.9 : 0.45})`;
       }
     }
     return undefined; // fall back to the themed default stroke

@@ -88,7 +88,7 @@ export const CollectionNodeCard = memo(
     };
 
     return (
-      <div className="group w-[230px] rounded-xl border border-border/60 bg-bg-secondary/95 font-sans text-[11px] text-primary shadow-[0_10px_28px_-14px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-[border-color] hover:border-border">
+      <div className="group w-[230px] rounded-2xl border border-border/40 bg-bg-secondary/95 font-sans text-[11px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color] hover:border-border/70">
         <Handle
           type="source"
           position={Position.Right}
@@ -97,7 +97,7 @@ export const CollectionNodeCard = memo(
         />
 
         {/* eyebrow */}
-        <div className="flex items-center gap-1.5 rounded-t-[11px] bg-accent/[0.08] px-3 py-1.5">
+        <div className="flex items-center gap-1.5 rounded-t-[15px] bg-accent/[0.06] px-3 py-1.5">
           <Bookmark className="h-3 w-3 shrink-0 text-accent" />
           <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">
             origin
@@ -237,7 +237,7 @@ export const CollectionNodeCard = memo(
           className={cn(
             "nodrag flex w-full items-center justify-center gap-1.5 px-3 py-2",
             "text-[10px] font-medium text-accent transition-colors hover:bg-accent/10",
-            run.status === "idle" && "rounded-b-[11px]"
+            run.status === "idle" && "rounded-b-[15px]"
           )}
           title="Add a request to this flow — it branches from the origin"
         >
@@ -247,14 +247,14 @@ export const CollectionNodeCard = memo(
 
         {/* flow verdict */}
         {running && (
-          <div className="rounded-b-[11px] border-t border-border/40 px-3 py-1.5 text-[10px] text-accent">
+          <div className="rounded-b-[15px] border-t border-border/40 px-3 py-1.5 text-[10px] text-accent">
             <span className="animate-pulse">running flow…</span>
           </div>
         )}
         {!running && run.error && (
           <div
             className={cn(
-              "rounded-b-[11px] border-t border-border/40 px-3 py-1.5 text-[10px] font-medium",
+              "rounded-b-[15px] border-t border-border/40 px-3 py-1.5 text-[10px] font-medium",
               run.status === "error"
                 ? "bg-danger/[0.07] text-danger"
                 : "bg-success/[0.07] text-success"

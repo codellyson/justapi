@@ -23,6 +23,7 @@ import type {
   AssertNodeData,
   BindingEdgeData,
 } from "./types";
+import { freePosition, relaxCollisions, tidyLayout } from "./layout";
 
 const uid = (): string =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -61,6 +62,8 @@ interface CanvasState {
   deleteGraph: (id: string) => void;
   /** Remove every node and edge from the active graph. */
   clearGraph: () => void;
+  /** Auto-arrange the active graph into a layered tree. */
+  tidyGraph: () => void;
   setActiveGraph: (id: string) => void;
 
   onNodesChange: (changes: NodeChange<CanvasNode>[]) => void;
@@ -150,14 +153,41 @@ export const useCanvasStore = create<CanvasState>()(
           ...withActive(s, () => ({ nodes: [], edges: [] })),
           inspectedEdgeId: null,
         })),
+      tidyGraph: () =>
+        set((s) =>
+          withActive(s, (g) => {
+            const layout = tidyLayout(g.nodes, g.edges);
+            return {
+              nodes: g.nodes.map((n) =>
+                layout[n.id] ? { ...n, position: layout[n.id] } : n
+              ),
+            };
+          })
+        ),
       setActiveGraph: (id) =>
         set((s) => (s.graphs[id] ? { activeGraphId: id, inspectedEdgeId: null } : {})),
 
       onNodesChange: (changes) =>
         set((s) =>
-          withActive(s, (g) => ({
-            nodes: applyNodeChanges(changes, g.nodes),
-          }))
+          withActive(s, (g) => {
+            // A card that RE-measures grew or shrank (preview opened, a
+            // section expanded) — relax the board so neighbors slide out
+            // of the way. First-time measurements (mount) don't count,
+            // so loading a saved board never shuffles it.
+            const resized = changes.some((c) => {
+              if (c.type !== "dimensions" || !c.dimensions) return false;
+              const prev = g.nodes.find((n) => n.id === c.id) as
+                | { measured?: { height?: number } }
+                | undefined;
+              const prevHeight = prev?.measured?.height;
+              return (
+                prevHeight !== undefined &&
+                Math.abs(prevHeight - c.dimensions.height) > 1
+              );
+            });
+            const nodes = applyNodeChanges(changes, g.nodes);
+            return { nodes: resized ? relaxCollisions(nodes) : nodes };
+          })
         ),
       onEdgesChange: (changes) =>
         set((s) =>
@@ -198,37 +228,55 @@ export const useCanvasStore = create<CanvasState>()(
       addRequestNode: (position, snapshot, name) => {
         const id = uid();
         const snap = emptySnapshot(snapshot);
-        const node: RequestNode = {
-          id,
-          type: "request",
-          position,
-          data: {
-            name: name ?? "",
-            snapshot: snap,
-            collapsed: false,
-          },
-        };
-        set((s) => withActive(s, (g) => ({ nodes: [...g.nodes, node] })));
+        set((s) =>
+          withActive(s, (g) => {
+            const node: RequestNode = {
+              id,
+              type: "request",
+              position: freePosition(g.nodes, position, "request"),
+              data: {
+                name: name ?? "",
+                snapshot: snap,
+                collapsed: false,
+              },
+            };
+            return { nodes: [...g.nodes, node] };
+          })
+        );
         return id;
       },
       addRequestNodes: (items) => {
-        const nodes: RequestNode[] = items.map((it) => ({
-          id: uid(),
-          type: "request",
-          position: it.position,
-          data: { name: it.name, snapshot: it.snapshot, collapsed: true },
-        }));
-        set((s) => withActive(s, (g) => ({ nodes: [...g.nodes, ...nodes] })));
+        set((s) =>
+          withActive(s, (g) => {
+            // Place sequentially so imported nodes clear the board AND
+            // each other.
+            const placed: CanvasNode[] = [...g.nodes];
+            for (const it of items) {
+              const node: RequestNode = {
+                id: uid(),
+                type: "request",
+                position: freePosition(placed, it.position, "request"),
+                data: { name: it.name, snapshot: it.snapshot, collapsed: true },
+              };
+              placed.push(node);
+            }
+            return { nodes: placed };
+          })
+        );
       },
       addCollectionNode: (position, collectionId) => {
         const id = uid();
-        const node: CanvasNode = {
-          id,
-          type: "collection",
-          position,
-          data: { collectionId },
-        };
-        set((s) => withActive(s, (g) => ({ nodes: [...g.nodes, node] })));
+        set((s) =>
+          withActive(s, (g) => {
+            const node: CanvasNode = {
+              id,
+              type: "collection",
+              position: freePosition(g.nodes, position, "collection"),
+              data: { collectionId },
+            };
+            return { nodes: [...g.nodes, node] };
+          })
+        );
         return id;
       },
       addLinkedRequest: (sourceNodeId, position) => {
@@ -240,7 +288,7 @@ export const useCanvasStore = create<CanvasState>()(
         const node: RequestNode = {
           id: nodeId,
           type: "request",
-          position,
+          position: freePosition(g.nodes, position, "request"),
           data: { name: "", snapshot: emptySnapshot(), collapsed: false },
         };
         // Origin sources wire silently; request sources get a binding
@@ -272,7 +320,7 @@ export const useCanvasStore = create<CanvasState>()(
         const node: CanvasNode = {
           id: nodeId,
           type: "assert",
-          position,
+          position: freePosition(g.nodes, position, "assert"),
           data: {
             checks: [{ id: uid(), path: "status", op: "equals", value: "200" }],
           },

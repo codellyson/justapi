@@ -28,8 +28,8 @@ export const hostAccent = (host: string): HostAccent => {
   const hue = hash(host) % 360;
   return {
     hue,
-    stripe: `hsl(${hue} 70% 55%)`,
-    strip: `hsl(${hue} 60% 55% / 0.12)`,
-    text: `hsl(${hue} 50% 45%)`,
+    stripe: `hsl(${hue} 45% 62%)`,
+    strip: `hsl(${hue} 40% 58% / 0.08)`,
+    text: `hsl(${hue} 35% 50%)`,
   };
 };

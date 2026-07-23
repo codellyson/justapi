@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import {
   Play,
@@ -187,6 +187,16 @@ export const RequestNodeCard = memo(
       return JSON.stringify({ ...active, ...(origin ?? {}) });
     });
 
+    // A fresh response opens its preview — the payoff of a run should be
+    // visible without a click. (Collapsing afterwards sticks until the
+    // next run finishes.)
+    useEffect(() => {
+      if (run.finishedAt && run.response) {
+        updateNodeData(id, { collapsed: false });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [run.finishedAt]);
+
     const [openSection, setOpenSection] = useState<Section>(null);
     const [editingUrl, setEditingUrl] = useState(!snapshot.urlRaw);
     const [saveOpen, setSaveOpen] = useState(false);
@@ -285,10 +295,10 @@ export const RequestNodeCard = memo(
     return (
       <div
         className={cn(
-          "group relative w-[360px] overflow-visible rounded-xl border bg-bg-secondary/95 font-sans shadow-[0_10px_28px_-14px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-[border-color,box-shadow]",
+          "group relative w-[360px] overflow-visible rounded-2xl border bg-bg-secondary/95 font-sans shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color,box-shadow]",
           selected
-            ? "border-accent/60 shadow-[0_10px_32px_-12px_rgba(0,0,0,0.55)]"
-            : "border-border/60 hover:border-border"
+            ? "border-accent/45"
+            : "border-border/40 hover:border-border/70"
         )}
       >
         <Handle
@@ -326,7 +336,7 @@ export const RequestNodeCard = memo(
 
         {/* eyebrow: host identity band */}
         <div
-          className="flex items-center gap-1.5 rounded-t-[11px] px-3 py-1.5"
+          className="flex items-center gap-1.5 rounded-t-[15px] px-3 py-1.5"
           style={{ background: hasHost ? accent.strip : undefined }}
         >
           <span
@@ -677,7 +687,7 @@ export const RequestNodeCard = memo(
           </div>
         )}
         {run.response && run.status !== "pending" && (
-          <div className="overflow-hidden rounded-b-[11px] border-t border-border/40">
+          <div className="overflow-hidden rounded-b-[15px] border-t border-border/40">
             <button
               type="button"
               onClick={() => updateNodeData(id, { collapsed: !collapsed })}

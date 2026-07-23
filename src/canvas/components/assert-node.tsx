@@ -59,12 +59,12 @@ export const AssertNodeCard = memo(
     return (
       <div
         className={cn(
-          "group w-[280px] rounded-xl border bg-bg-secondary/95 font-sans text-[11px] text-primary shadow-[0_10px_28px_-14px_rgba(0,0,0,0.5)] backdrop-blur-sm transition-[border-color]",
+          "group w-[280px] rounded-2xl border bg-bg-secondary/95 font-sans text-[11px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color]",
           anyFail
             ? "border-danger/50"
             : allPass
             ? "border-success/40"
-            : "border-border/60 hover:border-border"
+            : "border-border/40 hover:border-border/70"
         )}
       >
         <Handle
@@ -75,7 +75,7 @@ export const AssertNodeCard = memo(
         />
 
         {/* eyebrow */}
-        <div className="flex items-center gap-1.5 rounded-t-[11px] bg-warning/[0.08] px-3 py-1.5">
+        <div className="flex items-center gap-1.5 rounded-t-[15px] bg-warning/[0.06] px-3 py-1.5">
           <ShieldCheck className="h-3 w-3 shrink-0 text-warning" />
           <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-warning">
             assert

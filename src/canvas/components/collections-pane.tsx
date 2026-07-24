@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { ChevronDown, ChevronRight, FolderPlus, Hexagon } from "lucide-react";
+import { cn } from "../../utils/cn";
 import { MethodPill } from "./method-pill";
 import { useActiveGraph, useCanvasStore } from "../use-canvas-store";
 import type {
@@ -49,6 +50,8 @@ export const CollectionsPane = () => {
   const addCollectionNode = useCanvasStore((s) => s.addCollectionNode);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
 
   const origins = graph.nodes.filter((n) => n.type === "collection");
   const requests = graph.nodes.filter(
@@ -86,16 +89,18 @@ export const CollectionsPane = () => {
       return next;
     });
 
-  const newCollection = () => {
-    const name = window.prompt("New collection name");
-    if (!name?.trim()) return;
-    addCollectionNode(
-      screenToFlowPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      }),
-      name.trim()
-    );
+  const submitNew = () => {
+    const name = newName.trim();
+    if (name)
+      addCollectionNode(
+        screenToFlowPosition({
+          x: window.innerWidth / 2,
+          y: window.innerHeight / 2,
+        }),
+        name
+      );
+    setNewName("");
+    setAdding(false);
   };
 
   const requestRow = (r: RequestNode) => {
@@ -127,13 +132,36 @@ export const CollectionsPane = () => {
         <span className="text-[11px] text-muted">collections · this canvas</span>
         <button
           type="button"
-          onClick={newCollection}
-          className="rounded p-1 text-secondary hover:bg-bg/60 hover:text-primary"
+          onClick={() => setAdding((a) => !a)}
+          className={cn(
+            "rounded p-1 hover:bg-bg/60 hover:text-primary",
+            adding ? "text-accent" : "text-secondary"
+          )}
           title="New collection on this canvas"
         >
           <FolderPlus className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      {adding && (
+        <div className="border-b border-border/40 px-3 py-2">
+          <input
+            className="w-full rounded-md border border-border/50 bg-bg px-2 py-1 text-[13px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70"
+            placeholder="collection name"
+            value={newName}
+            autoFocus
+            spellCheck={false}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitNew();
+              if (e.key === "Escape") {
+                setAdding(false);
+                setNewName("");
+              }
+            }}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto py-1">
         {isEmpty && (

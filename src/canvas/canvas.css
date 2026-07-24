@@ -76,10 +76,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .justapi-canvas .justapi-edge-flowing {
-    animation: none;
-  }
-
+  /* The wire flow is a status indicator (a request is in flight), not
+     decoration, so it keeps animating even under reduced motion. Only the
+     positional node glide is suppressed. */
   .justapi-canvas .react-flow__node:not(.dragging) {
     transition: none;
   }

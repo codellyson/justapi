@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import { MethodPill } from "./method-pill";
@@ -18,7 +19,14 @@ export const SnippetsPane = () => {
   const renameSnippet = useSnippetsStore((s) => s.renameSnippet);
   const addRequestNode = useCanvasStore((s) => s.addRequestNode);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
   const list = [...snippets].sort((a, b) => b.createdAt - a.createdAt);
+
+  const commitRename = (id: string, value: string) => {
+    const v = value.trim();
+    if (v) renameSnippet(id, v);
+    setEditingId(null);
+  };
 
   const drop = (name: string, snapshot: CardRequestSnapshot) => {
     const p = screenToFlowPosition({
@@ -53,40 +61,54 @@ export const SnippetsPane = () => {
             key={s.id}
             className="group flex items-center gap-1.5 py-1 pl-2.5 pr-2 hover:bg-bg/60"
           >
-            <button
-              type="button"
-              onClick={() => drop(s.name, s.snapshot)}
-              className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-              title={`${s.snapshot.method} ${s.snapshot.urlRaw}\nClick to add to canvas`}
-            >
-              <MethodPill
-                method={s.snapshot.method}
-                className="px-1 py-0 text-[10px]"
+            {editingId === s.id ? (
+              <input
+                className="min-w-0 flex-1 rounded border border-accent/50 bg-bg px-1.5 py-0.5 text-[12px] text-primary outline-none"
+                defaultValue={s.name}
+                autoFocus
+                spellCheck={false}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter")
+                    commitRename(s.id, (e.target as HTMLInputElement).value);
+                  else if (e.key === "Escape") setEditingId(null);
+                }}
+                onBlur={(e) => commitRename(s.id, e.target.value)}
               />
-              <span className="flex-1 truncate text-[12px] text-secondary group-hover:text-primary">
-                {s.name || s.snapshot.urlRaw || "untitled request"}
-              </span>
-              <Plus className="hidden h-3 w-3 shrink-0 text-accent group-hover:block" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const name = window.prompt("Rename snippet", s.name);
-                if (name?.trim()) renameSnippet(s.id, name.trim());
-              }}
-              className="hidden rounded p-0.5 text-muted hover:text-primary group-hover:block"
-              title="Rename"
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              onClick={() => removeSnippet(s.id)}
-              className="hidden rounded p-0.5 text-muted hover:text-danger group-hover:block"
-              title="Delete snippet"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => drop(s.name, s.snapshot)}
+                  className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                  title={`${s.snapshot.method} ${s.snapshot.urlRaw}\nClick to add to canvas`}
+                >
+                  <MethodPill
+                    method={s.snapshot.method}
+                    className="px-1 py-0 text-[10px]"
+                  />
+                  <span className="flex-1 truncate text-[12px] text-secondary group-hover:text-primary">
+                    {s.name || s.snapshot.urlRaw || "untitled request"}
+                  </span>
+                  <Plus className="hidden h-3 w-3 shrink-0 text-accent group-hover:block" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingId(s.id)}
+                  className="hidden rounded p-0.5 text-muted hover:text-primary group-hover:block"
+                  title="Rename"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeSnippet(s.id)}
+                  className="hidden rounded p-0.5 text-muted hover:text-danger group-hover:block"
+                  title="Delete snippet"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </>
+            )}
           </div>
         ))}
       </div>

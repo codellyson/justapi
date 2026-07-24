@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Pencil, Trash2, Plus, Eraser } from "lucide-react";
+import { Check, Pencil, Trash2, Plus, Eraser, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useCanvasStore } from "../use-canvas-store";
 
 /**
  * Canvases panel: every named board, docked beside the rail like the
- * collections pane. Switch, rename, delete, add — the list scrolls, so it
- * scales past a handful the way a floating popover never could.
+ * collections pane. Switch, rename (inline), delete (two-step), add — the
+ * list scrolls, so it scales past a handful.
  */
 export const CanvasPane = () => {
   const graphs = useCanvasStore((s) => s.graphs);
@@ -20,8 +20,16 @@ export const CanvasPane = () => {
   const clearGraph = useCanvasStore((s) => s.clearGraph);
 
   const [confirmClear, setConfirmClear] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const active = graphs[activeGraphId];
   const list = Object.values(graphs).sort((a, b) => a.createdAt - b.createdAt);
+
+  const commitRename = (id: string, value: string) => {
+    const v = value.trim();
+    if (v) renameGraph(id, v);
+    setEditingId(null);
+  };
 
   return (
     <div className="flex w-60 flex-none flex-col border-r border-border/50 bg-bg-secondary font-sans">
@@ -30,7 +38,7 @@ export const CanvasPane = () => {
         <button
           type="button"
           onClick={() => createGraph()}
-          className="rounded p-1 text-secondary hover:text-primary hover:bg-bg/60"
+          className="rounded p-1 text-secondary hover:bg-bg/60 hover:text-primary"
           title="New canvas"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -46,45 +54,86 @@ export const CanvasPane = () => {
               g.id === activeGraphId ? "text-accent" : "text-secondary"
             )}
           >
-            <button
-              type="button"
-              onClick={() => setActiveGraph(g.id)}
-              className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-primary"
-            >
-              {g.id === activeGraphId ? (
-                <Check className="h-3.5 w-3.5 shrink-0" />
-              ) : (
-                <span className="w-3.5 shrink-0" />
-              )}
-              <span className="flex-1 truncate">{g.name}</span>
-              <span
-                className="text-[12px] text-muted"
-                title={`${g.nodes.length} node${g.nodes.length === 1 ? "" : "s"}`}
-              >
-                {g.nodes.length}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const name = window.prompt("Rename canvas", g.name);
-                if (name?.trim()) renameGraph(g.id, name.trim());
-              }}
-              className="hidden rounded p-0.5 text-muted hover:text-primary group-hover:block"
-              title="Rename"
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm(`Delete canvas "${g.name}"?`)) deleteGraph(g.id);
-              }}
-              className="hidden rounded p-0.5 text-muted hover:text-danger group-hover:block"
-              title="Delete"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+            {editingId === g.id ? (
+              <input
+                className="min-w-0 flex-1 rounded border border-accent/50 bg-bg px-1.5 py-0.5 text-[13px] text-primary outline-none"
+                defaultValue={g.name}
+                autoFocus
+                spellCheck={false}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter")
+                    commitRename(g.id, (e.target as HTMLInputElement).value);
+                  else if (e.key === "Escape") setEditingId(null);
+                }}
+                onBlur={(e) => commitRename(g.id, e.target.value)}
+              />
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setActiveGraph(g.id)}
+                  className="flex min-w-0 flex-1 items-center gap-1.5 text-left hover:text-primary"
+                >
+                  {g.id === activeGraphId ? (
+                    <Check className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <span className="w-3.5 shrink-0" />
+                  )}
+                  <span className="flex-1 truncate">{g.name}</span>
+                  <span
+                    className="text-[12px] text-muted"
+                    title={`${g.nodes.length} node${g.nodes.length === 1 ? "" : "s"}`}
+                  >
+                    {g.nodes.length}
+                  </span>
+                </button>
+                {pendingDelete === g.id ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        deleteGraph(g.id);
+                        setPendingDelete(null);
+                      }}
+                      className="rounded p-0.5 text-danger hover:bg-danger/10"
+                      title="Confirm delete"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(null)}
+                      className="rounded p-0.5 text-muted hover:text-primary"
+                      title="Cancel"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingDelete(null);
+                        setEditingId(g.id);
+                      }}
+                      className="hidden rounded p-0.5 text-muted hover:text-primary group-hover:block"
+                      title="Rename"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(g.id)}
+                      className="hidden rounded p-0.5 text-muted hover:text-danger group-hover:block"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </>
+                )}
+              </>
+            )}
           </div>
         ))}
       </div>

@@ -3,43 +3,16 @@
 import { useMemo } from "react";
 import { X, Trash2 } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { extractFromResponse, extractedToString } from "../get-path";
+import {
+  extractFromResponse,
+  extractedToString,
+  collectLeaves,
+  lastSegment,
+  type Leaf,
+} from "../get-path";
 import type { BindingEdgeData } from "../types";
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
 import { useRunStore } from "../use-run-store";
-
-interface Leaf {
-  path: string;
-  value: unknown;
-}
-
-const LEAF_CAP = 60;
-
-/** Flatten a response payload into pickable `data.x[0].y` leaf paths. */
-const collectLeaves = (value: unknown, prefix: string, out: Leaf[]): void => {
-  if (out.length >= LEAF_CAP) return;
-  if (value === null || typeof value !== "object") {
-    out.push({ path: prefix, value });
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      if (out.length >= LEAF_CAP) return;
-      collectLeaves(value[i], `${prefix}[${i}]`, out);
-    }
-    return;
-  }
-  for (const [k, v] of Object.entries(value)) {
-    if (out.length >= LEAF_CAP) return;
-    collectLeaves(v, `${prefix}.${k}`, out);
-  }
-};
-
-/** Last meaningful segment of a path, for auto-naming the variable. */
-const lastSegment = (path: string): string => {
-  const m = path.match(/\.?([A-Za-z_$][\w$]*)(?:\[\d+\])*$/);
-  return m ? m[1] : "";
-};
 
 /**
  * Popover anchored under the edge label: edit the extraction path, the
@@ -169,9 +142,9 @@ export const EdgeInspector = ({ edgeId }: { edgeId: string }) => {
                   </span>
                 </button>
               ))}
-              {leaves.length >= LEAF_CAP && (
+              {leaves.length >= 60 && (
                 <div className="px-2 py-1 text-[10px] text-muted">
-                  first {LEAF_CAP} fields shown — type deeper paths above
+                  first 60 fields shown — type deeper paths above
                 </div>
               )}
             </div>

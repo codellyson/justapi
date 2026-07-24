@@ -72,6 +72,43 @@ export const extractFromResponse = (
   return getPath(response.data, p);
 };
 
+export interface Leaf {
+  path: string;
+  value: unknown;
+}
+
+const LEAF_CAP = 60;
+
+/** Flatten a response payload into pickable `data.x[0].y` leaf paths. */
+export const collectLeaves = (
+  value: unknown,
+  prefix = "data",
+  out: Leaf[] = []
+): Leaf[] => {
+  if (out.length >= LEAF_CAP) return out;
+  if (value === null || typeof value !== "object") {
+    out.push({ path: prefix, value });
+    return out;
+  }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length && out.length < LEAF_CAP; i++) {
+      collectLeaves(value[i], `${prefix}[${i}]`, out);
+    }
+    return out;
+  }
+  for (const [k, v] of Object.entries(value)) {
+    if (out.length >= LEAF_CAP) break;
+    collectLeaves(v, `${prefix}.${k}`, out);
+  }
+  return out;
+};
+
+/** Last meaningful segment of a path, for auto-naming a variable. */
+export const lastSegment = (path: string): string => {
+  const m = path.match(/\.?([A-Za-z_$][\w$]*)(?:\[\d+\])*$/);
+  return m ? m[1] : "";
+};
+
 /** Stringify an extracted value for use as a variable/header value. */
 export const extractedToString = (value: unknown): string => {
   if (value === undefined || value === null) return "";

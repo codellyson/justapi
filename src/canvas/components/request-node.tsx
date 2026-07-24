@@ -12,16 +12,18 @@ import {
   Check,
   Plus,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import { methodPillColor } from "./method-pill";
 import { JsonView } from "./json-view";
 import { extractHost, hostAccent } from "../host";
+import { collectLeaves, lastSegment } from "../get-path";
 import { replaceVariables } from "../../utils/variables";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { formatSize } from "../format";
 import { cn } from "../../utils/cn";
 import type { HttpMethod } from "../../utils/http";
-import type { AuthType, BodyType } from "../types";
+import type { AuthType, BodyType, Capture } from "../types";
 import type { RequestNode as RequestNodeType, RequestNodeData } from "../types";
 import { useCanvasStore } from "../use-canvas-store";
 import { useRunStore, idleRun, abortNode } from "../use-run-store";
@@ -37,6 +39,9 @@ const METHODS: HttpMethod[] = [
   "HEAD",
   "OPTIONS",
 ];
+
+const uid = (): string =>
+  `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
 const headersToText = (h: Record<string, string>): string =>
   Object.entries(h)
@@ -105,7 +110,7 @@ const UrlText = ({ url }: { url: string }) => {
   );
 };
 
-type Section = "headers" | "body" | "auth" | null;
+type Section = "headers" | "body" | "auth" | "captures" | null;
 
 /** Walk upstream from a node to the flow origin it belongs to (if any)
  *  and return the requested field of that origin's data. */
@@ -249,6 +254,26 @@ export const RequestNodeCard = memo(
         y: self.position.y + outgoing * 150,
       });
     };
+
+    // Post-response captures: pull values from this response into variables.
+    const captures = (data as RequestNodeData).captures ?? [];
+    const captureCount = captures.filter((c) => c.var.trim()).length;
+    const setCaptures = (next: Capture[]) =>
+      updateNodeData(id, { captures: next });
+    const addCapture = (path = "", varName = "") =>
+      setCaptures([...captures, { id: uid(), path, var: varName }]);
+    const patchCapture = (cid: string, patch: Partial<Capture>) =>
+      setCaptures(captures.map((c) => (c.id === cid ? { ...c, ...patch } : c)));
+    const removeCapture = (cid: string) =>
+      setCaptures(captures.filter((c) => c.id !== cid));
+
+    const captureLeaves = useMemo(() => {
+      const body = run.response?.data;
+      if (body === undefined || body === null || body instanceof ArrayBuffer) {
+        return [];
+      }
+      return collectLeaves(body);
+    }, [run.response]);
 
     const metaChip = (
       section: Exclude<Section, null>,
@@ -447,6 +472,11 @@ export const RequestNodeCard = memo(
             snapshot.authType !== "none" ? `auth·${snapshot.authType}` : "auth",
             snapshot.authType !== "none"
           )}
+          {metaChip(
+            "captures",
+            captureCount > 0 ? `capture·${captureCount}` : "capture",
+            captureCount > 0
+          )}
           <div className="flex-1" />
           <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <button
@@ -620,6 +650,76 @@ export const RequestNodeCard = memo(
                   }
                   spellCheck={false}
                 />
+              </div>
+            )}
+          </div>
+        )}
+        {openSection === "captures" && (
+          <div className="space-y-1.5 border-t border-border/40 px-3 py-2">
+            <div className="text-[11px] text-muted">
+              set variables from this response — usable as{" "}
+              <span className="font-mono text-secondary">{"{{var}}"}</span>{" "}
+              anywhere downstream
+            </div>
+            {captures.map((c) => (
+              <div key={c.id} className="flex items-center gap-1">
+                <input
+                  className="nodrag min-w-0 flex-1 rounded border border-border/50 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
+                  placeholder="data.access_token"
+                  value={c.path}
+                  onChange={(e) => patchCapture(c.id, { path: e.target.value })}
+                  spellCheck={false}
+                />
+                <span className="shrink-0 text-muted">→</span>
+                <span className="shrink-0 font-mono text-[12px] text-accent">
+                  {"{{"}
+                </span>
+                <input
+                  className="nodrag w-20 shrink-0 rounded border border-border/50 bg-bg px-1.5 py-0.5 font-mono text-[12px] text-accent outline-none focus:border-accent/60 placeholder:text-muted/70"
+                  placeholder="token"
+                  value={c.var}
+                  onChange={(e) => patchCapture(c.id, { var: e.target.value })}
+                  spellCheck={false}
+                />
+                <span className="shrink-0 font-mono text-[12px] text-accent">
+                  {"}}"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeCapture(c.id)}
+                  className="nodrag shrink-0 rounded p-0.5 text-muted hover:text-danger"
+                  title="Remove capture"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => addCapture()}
+              className="nodrag flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-muted transition-colors hover:text-accent"
+            >
+              <Plus className="h-2.5 w-2.5" />
+              add capture
+            </button>
+            {captureLeaves.length > 0 && (
+              <div className="border-t border-border/40 pt-1.5">
+                <div className="mb-1 text-[10px] uppercase tracking-wide text-muted">
+                  from this response
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {captureLeaves.slice(0, 16).map((l) => (
+                    <button
+                      key={l.path}
+                      type="button"
+                      onClick={() => addCapture(l.path, lastSegment(l.path))}
+                      className="nodrag max-w-[150px] truncate rounded border border-border/50 bg-bg px-1.5 py-0.5 font-mono text-[10px] text-secondary transition-colors hover:border-accent/50 hover:text-primary"
+                      title={`capture ${l.path}`}
+                    >
+                      {l.path}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

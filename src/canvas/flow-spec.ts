@@ -45,6 +45,8 @@ export interface FlowRequest {
   after?: string;
   bindings?: FlowBinding[];
   asserts?: FlowAssert[];
+  /** Values pulled from this request's response into variables on run. */
+  captures?: { path: string; var: string }[];
 }
 
 export interface FlowSpec {
@@ -181,6 +183,16 @@ export const parseFlowSpec = (
         }
         if (typeof a.op !== "string" || !OPS.has(a.op)) {
           errors.push(`${at}.asserts[${j}].op must be one of ${[...OPS].join("/")}`);
+        }
+      }
+    );
+    (Array.isArray(r.captures) ? r.captures : []).forEach(
+      (c: Record<string, unknown>, j: number) => {
+        if (typeof c.path !== "string" || !c.path.trim()) {
+          errors.push(`${at}.captures[${j}].path is required`);
+        }
+        if (typeof c.var !== "string" || !c.var.trim()) {
+          errors.push(`${at}.captures[${j}].var is required`);
         }
       }
     );

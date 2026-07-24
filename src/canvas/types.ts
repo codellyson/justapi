@@ -24,6 +24,14 @@ export interface CardRequestSnapshot {
   authConfig: Record<string, string | undefined>;
 }
 
+/** A post-response capture: after this request runs, extract `path` from
+ *  its response and set variable `var` (used as {{var}} downstream). */
+export interface Capture {
+  id: string;
+  path: string;
+  var: string;
+}
+
 /** Data payload of a request node. The snapshot reuses the v1 frozen
  *  request shape so send/parse/share machinery works unchanged. */
 export interface RequestNodeData extends Record<string, unknown> {
@@ -33,6 +41,8 @@ export interface RequestNodeData extends Record<string, unknown> {
   /** Spec-local id when this node was materialized from a flow spec —
    *  keeps agent upserts idempotent and run reports addressable. */
   specId?: string;
+  /** Values pulled from this request's response into variables on run. */
+  captures?: Capture[];
 }
 
 /** Collection nodes are flow origins: the root of a request tree.

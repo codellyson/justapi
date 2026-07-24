@@ -13,6 +13,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import "../canvas.css";
+import { cn } from "../../utils/cn";
 
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
 import { settlePosition } from "../layout";
@@ -24,11 +25,17 @@ import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
 import { BindingEdgeView } from "./binding-edge";
 import { Rail } from "./rail";
-import { Library } from "./library";
+import { CollectionsPane } from "./collections-pane";
+import { CanvasPane } from "./canvas-pane";
+import { SnippetsPane } from "./snippets-pane";
+import { ThemePane } from "./theme-pane";
 import { StatusBar } from "./status-bar";
+import { useSnippetsStore } from "../use-snippets-store";
 import { ImportDialog } from "./import-dialog";
 import { EmptyState } from "./empty-state";
-import { ThemeToggle } from "../../components/ui/theme-toggle";
+import { SpecDrawer } from "./spec-drawer";
+import { ControlCluster } from "./control-cluster";
+import { Tour } from "./tour";
 
 // Constant identity — React Flow warns (and re-mounts nodes) otherwise.
 const nodeTypes = {
@@ -47,7 +54,59 @@ const CanvasInner = () => {
   const setInspectedEdge = useCanvasStore((s) => s.setInspectedEdge);
 
   const [importOpen, setImportOpen] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [leftPane, setLeftPane] = useState<
+    null | "collections" | "canvases" | "snippets" | "theme"
+  >(null);
+  const [specOpen, setSpecOpen] = useState(false);
+  const [tourSignal, setTourSignal] = useState(0);
+  const togglePane = (
+    pane: "collections" | "canvases" | "snippets" | "theme"
+  ) => setLeftPane((p) => (p === pane ? null : pane));
+
+  // Keep pane/drawer content mounted through the collapse animation, so
+  // closing slides out instead of vanishing.
+  const [displayedPane, setDisplayedPane] = useState(leftPane);
+  useEffect(() => {
+    if (leftPane) {
+      setDisplayedPane(leftPane);
+      return;
+    }
+    const t = setTimeout(() => setDisplayedPane(null), 200);
+    return () => clearTimeout(t);
+  }, [leftPane]);
+
+  const [specMounted, setSpecMounted] = useState(false);
+  useEffect(() => {
+    if (specOpen) {
+      setSpecMounted(true);
+      return;
+    }
+    const t = setTimeout(() => setSpecMounted(false), 200);
+    return () => clearTimeout(t);
+  }, [specOpen]);
+
+  // One-time migration: legacy saved requests (from when collections
+  // doubled as a request library) become global snippets. Read straight
+  // from localStorage so the retired collections store can be deleted.
+  useEffect(() => {
+    const snip = useSnippetsStore.getState();
+    if (snip.migrated) return;
+    try {
+      const raw = localStorage.getItem("justapi-canvas-collections");
+      const parsed = raw ? JSON.parse(raw) : null;
+      const legacy = (parsed?.state?.collections ?? []).flatMap(
+        (c: { requests?: { name: string; snapshot: unknown; createdAt: number }[] }) =>
+          (c.requests ?? []).map((r) => ({
+            name: r.name,
+            snapshot: r.snapshot as never,
+            createdAt: r.createdAt,
+          }))
+      );
+      snip.seedFromLegacy(legacy);
+    } catch {
+      snip.seedFromLegacy([]);
+    }
+  }, []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -131,48 +190,83 @@ const CanvasInner = () => {
   }, [selectedNodeId]);
 
   return (
-    <div className="justapi-canvas relative h-[100dvh] w-full bg-bg text-primary">
-      <ReactFlow
-        nodes={graph.nodes}
-        edges={graph.edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onConnectEnd={onConnectEnd}
-        onNodeDragStop={onNodeDragStop}
-        onNodeClick={onNodeClick}
-        onPaneClick={() => {
-          setInspectedEdge(null);
-          setSelectedNodeId(null);
-        }}
-        onMoveEnd={(_e, viewport) => setViewport(viewport)}
-        defaultViewport={graph.viewport ?? undefined}
-        fitView={!graph.viewport}
-        fitViewOptions={{ padding: 0.25, maxZoom: 1, minZoom: 0.65 }}
-        deleteKeyCode={["Backspace", "Delete"]}
-        minZoom={0.15}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background variant={BackgroundVariant.Dots} gap={30} size={1} />
-      </ReactFlow>
+    <div className="justapi-canvas flex h-[100dvh] w-full flex-col bg-bg text-primary">
+      {/* main row: rail · docked pane · canvas · docked drawer */}
+      <div className="flex min-h-0 flex-1">
+        <Rail
+          libraryOpen={leftPane === "collections"}
+          onToggleLibrary={() => togglePane("collections")}
+          onOpenImport={() => setImportOpen(true)}
+          specOpen={specOpen}
+          onToggleSpec={() => setSpecOpen((o) => !o)}
+          canvasesOpen={leftPane === "canvases"}
+          onToggleCanvases={() => togglePane("canvases")}
+          snippetsOpen={leftPane === "snippets"}
+          onToggleSnippets={() => togglePane("snippets")}
+          themeOpen={leftPane === "theme"}
+          onToggleTheme={() => togglePane("theme")}
+          onStartTour={() => setTourSignal((n) => n + 1)}
+        />
+        <div
+          className={cn(
+            "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
+            leftPane ? "w-60" : "w-0"
+          )}
+        >
+          {displayedPane === "collections" && <CollectionsPane />}
+          {displayedPane === "canvases" && <CanvasPane />}
+          {displayedPane === "snippets" && <SnippetsPane />}
+          {displayedPane === "theme" && <ThemePane />}
+        </div>
 
-      <Rail
-        libraryOpen={libraryOpen}
-        onToggleLibrary={() => setLibraryOpen((o) => !o)}
-        onOpenImport={() => setImportOpen(true)}
-      />
-      {libraryOpen && <Library />}
+        <div className="relative min-w-0 flex-1">
+          <ReactFlow
+            nodes={graph.nodes}
+            edges={graph.edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onConnectEnd={onConnectEnd}
+            onNodeDragStop={onNodeDragStop}
+            onNodeClick={onNodeClick}
+            onPaneClick={() => {
+              setInspectedEdge(null);
+              setSelectedNodeId(null);
+            }}
+            onMoveEnd={(_e, viewport) => setViewport(viewport)}
+            defaultViewport={graph.viewport ?? undefined}
+            fitView={!graph.viewport}
+            fitViewOptions={{ padding: 0.25, maxZoom: 1, minZoom: 0.65 }}
+            deleteKeyCode={["Backspace", "Delete"]}
+            minZoom={0.15}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={30} size={1} />
+          </ReactFlow>
+
+          <ControlCluster />
+          {graph.nodes.length === 0 && (
+            <EmptyState onOpenImport={() => setImportOpen(true)} />
+          )}
+        </div>
+
+        <div
+          className={cn(
+            "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
+            specOpen ? "w-[380px]" : "w-0"
+          )}
+        >
+          {specMounted && <SpecDrawer onClose={() => setSpecOpen(false)} />}
+        </div>
+      </div>
+
       <StatusBar />
 
-      {graph.nodes.length === 0 && (
-        <EmptyState onOpenImport={() => setImportOpen(true)} />
-      )}
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} />}
-
-      <ThemeToggle />
+      <Tour startSignal={tourSignal} />
     </div>
   );
 };

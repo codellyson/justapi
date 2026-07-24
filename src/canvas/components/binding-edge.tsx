@@ -145,6 +145,7 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
         >
           <button
             type="button"
+            data-tour="bind"
             onClick={() => setInspectedEdge(inspected ? null : id)}
             className={cn(
               "px-1.5 py-0.5 rounded-md border font-mono text-[12px] backdrop-blur-sm transition-colors max-w-[220px] truncate block",
@@ -156,7 +157,19 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
             )}
             title="Edit binding"
           >
-            {label}
+            {binding?.targetName ? (
+              <>
+                <span className="text-muted">{binding.sourcePath}</span>
+                <span className="opacity-50"> → </span>
+                <span className={inspected || selected ? "text-accent" : "text-primary"}>
+                  {binding.targetKind === "variable"
+                    ? `{{${binding.targetName}}}`
+                    : `${binding.targetName}:`}
+                </span>
+              </>
+            ) : (
+              label
+            )}
           </button>
           {inspected && binding && <EdgeInspector edgeId={id} />}
         </div>

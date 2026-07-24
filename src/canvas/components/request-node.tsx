@@ -25,7 +25,7 @@ import type { AuthType, BodyType } from "../types";
 import type { RequestNode as RequestNodeType, RequestNodeData } from "../types";
 import { useCanvasStore } from "../use-canvas-store";
 import { useRunStore, idleRun, abortNode } from "../use-run-store";
-import { useCollectionsStore } from "../use-collections-store";
+import { useSnippetsStore } from "../use-snippets-store";
 import { runNode, runChain } from "../engine";
 
 const METHODS: HttpMethod[] = [
@@ -37,17 +37,6 @@ const METHODS: HttpMethod[] = [
   "HEAD",
   "OPTIONS",
 ];
-
-/** Text color half of the method pill classes (drop the bg utility). */
-const methodTextColor: Record<HttpMethod, string> = Object.fromEntries(
-  Object.entries(methodPillColor).map(([m, cls]) => [
-    m,
-    cls
-      .split(" ")
-      .filter((c) => !c.startsWith("bg-"))
-      .join(" "),
-  ])
-) as Record<HttpMethod, string>;
 
 const headersToText = (h: Record<string, string>): string =>
   Object.entries(h)
@@ -124,7 +113,7 @@ const findOriginField = (
   nodes: { id: string; type?: string; data: Record<string, unknown> }[],
   edges: { source: string; target: string }[],
   nodeId: string,
-  field: "collectionId" | "environmentId"
+  field: "name" | "environmentId"
 ): string | null => {
   const visited = new Set<string>([nodeId]);
   const queue = [nodeId];
@@ -156,18 +145,13 @@ export const RequestNodeCard = memo(
     const addLinkedRequest = useCanvasStore((s) => s.addLinkedRequest);
     const addAssertNode = useCanvasStore((s) => s.addAssertNode);
 
-    // Which flow origin does this request trace back to? Shown as a
-    // membership badge in the eyebrow.
-    const originCollectionId = useCanvasStore((s) => {
+    // Which flow origin does this request trace back to? Its name shows as
+    // a membership badge in the eyebrow.
+    const originName = useCanvasStore((s) => {
       const g = s.graphs[s.activeGraphId];
       if (!g) return null;
-      return findOriginField(g.nodes, g.edges, id, "collectionId");
+      return findOriginField(g.nodes, g.edges, id, "name") || null;
     });
-    const originName = useCollectionsStore((s) =>
-      originCollectionId
-        ? s.collections.find((c) => c.id === originCollectionId)?.name ?? null
-        : null
-    );
 
     // Env vars the tree runs under (origin env over active env) — used to
     // resolve {{vars}} in the URL for display, so a request whose host
@@ -199,15 +183,11 @@ export const RequestNodeCard = memo(
 
     const [openSection, setOpenSection] = useState<Section>(null);
     const [editingUrl, setEditingUrl] = useState(!snapshot.urlRaw);
-    const [saveOpen, setSaveOpen] = useState(false);
     const [savedFlash, setSavedFlash] = useState(false);
-    const collections = useCollectionsStore((s) => s.collections);
-    const saveRequest = useCollectionsStore((s) => s.saveRequest);
-    const createCollection = useCollectionsStore((s) => s.createCollection);
+    const saveSnippet = useSnippetsStore((s) => s.saveSnippet);
 
-    const saveTo = (collectionId: string) => {
-      saveRequest(collectionId, name || snapshot.urlRaw, snapshot);
-      setSaveOpen(false);
+    const saveAsSnippet = () => {
+      saveSnippet(name || snapshot.urlRaw || "untitled request", snapshot);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1200);
     };
@@ -280,7 +260,7 @@ export const RequestNodeCard = memo(
         type="button"
         onClick={() => toggleSection(section)}
         className={cn(
-          "nodrag text-[12px] tracking-wide transition-colors",
+          "nodrag font-mono text-[11px] transition-colors",
           openSection === section
             ? "text-accent"
             : set
@@ -294,12 +274,18 @@ export const RequestNodeCard = memo(
 
     return (
       <div
+        data-tour="request"
         className={cn(
-          "group relative w-[400px] overflow-visible rounded-2xl border bg-bg-secondary/95 font-sans shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color,box-shadow]",
+          "group relative w-[400px] overflow-visible rounded-2xl border bg-gradient-to-b from-bg-secondary/95 to-bg/85 font-sans shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color,box-shadow]",
           selected
             ? "border-accent/45"
             : "border-border/40 hover:border-border/70"
         )}
+        style={
+          !selected && hasHost
+            ? { borderColor: `hsl(${accent.hue} 40% 58% / 0.28)` }
+            : undefined
+        }
       >
         <Handle
           type="target"
@@ -379,8 +365,8 @@ export const RequestNodeCard = memo(
             type="button"
             onClick={cycleMethod}
             className={cn(
-              "nodrag shrink-0 font-mono text-[15px] font-bold tracking-wide",
-              methodTextColor[snapshot.method]
+              "nodrag shrink-0 rounded-md px-2 py-0.5 font-mono text-[13px] font-semibold tracking-wide transition-[filter] hover:brightness-110",
+              methodPillColor[snapshot.method]
             )}
             title="Click to cycle method"
           >
@@ -445,7 +431,7 @@ export const RequestNodeCard = memo(
         </div>
 
         {/* meta line */}
-        <div className="flex items-center gap-3 px-3 pb-2">
+        <div className="flex items-center gap-4 border-t border-border/40 bg-black/[0.015] px-3 py-1.5 dark:bg-white/[0.02]">
           {metaChip(
             "headers",
             headerCount > 0 ? `headers·${headerCount}` : "headers",
@@ -462,19 +448,15 @@ export const RequestNodeCard = memo(
             snapshot.authType !== "none"
           )}
           <div className="flex-1" />
-          <div className="relative flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <button
               type="button"
-              onClick={() => setSaveOpen((o) => !o)}
+              onClick={saveAsSnippet}
               className={cn(
                 "nodrag rounded p-0.5",
-                savedFlash
-                  ? "text-success"
-                  : saveOpen
-                  ? "text-accent"
-                  : "text-muted hover:text-accent"
+                savedFlash ? "text-success" : "text-muted hover:text-accent"
               )}
-              title="Save to collection"
+              title="Save as snippet"
             >
               {savedFlash ? (
                 <Check className="h-3 w-3" />
@@ -490,38 +472,6 @@ export const RequestNodeCard = memo(
             >
               <Trash2 className="h-3 w-3" />
             </button>
-            {saveOpen && (
-              <div className="nodrag absolute right-0 top-full z-20 mt-1.5 w-44 rounded-lg border border-border/60 bg-bg-secondary/95 py-1 font-sans shadow-[0_12px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-sm">
-                <div className="px-2 pb-1 pt-0.5 text-[11px] text-muted">
-                  save to
-                </div>
-                {collections.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => saveTo(c.id)}
-                    className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[13px] text-secondary hover:bg-bg/60 hover:text-primary"
-                  >
-                    <Bookmark className="h-3 w-3 shrink-0 text-muted" />
-                    <span className="truncate">{c.name}</span>
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const cname = window.prompt("New collection name");
-                    if (cname?.trim()) saveTo(createCollection(cname.trim()));
-                  }}
-                  className={cn(
-                    "flex w-full items-center gap-1.5 px-2 py-1 text-left text-[13px] text-accent hover:bg-accent/10",
-                    collections.length > 0 &&
-                      "mt-1 border-t border-border/40 pt-1.5"
-                  )}
-                >
-                  + new collection
-                </button>
-              </div>
-            )}
           </div>
         </div>
 

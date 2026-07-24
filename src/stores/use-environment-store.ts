@@ -14,25 +14,29 @@ interface EnvironmentState {
   getVariables: () => Record<string, string>;
 }
 
+const STORAGE_KEY = 'justapi-environments';
+const LEGACY_KEY = 'environment-storage';
+
+// One-time key migration: carry persisted environments over from the old
+// un-namespaced key so existing variables survive the rename.
+if (typeof window !== 'undefined') {
+  try {
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      const legacy = localStorage.getItem(LEGACY_KEY);
+      if (legacy) localStorage.setItem(STORAGE_KEY, legacy);
+    }
+    localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    /* private mode — fall back to defaults */
+  }
+}
+
+// Fresh installs start with a single environment; the old Local/Dev/
+// Staging/Prod placeholders are gone. Migrated users keep whatever they had.
 const defaultEnvironments: Environment[] = [
   {
     id: 'local',
     name: 'Local',
-    variables: {},
-  },
-  {
-    id: 'dev',
-    name: 'Development',
-    variables: {},
-  },
-  {
-    id: 'staging',
-    name: 'Staging',
-    variables: {},
-  },
-  {
-    id: 'prod',
-    name: 'Production',
     variables: {},
   },
 ];
@@ -85,7 +89,7 @@ export const useEnvironmentStore = create<EnvironmentState>()(
       },
     }),
     {
-      name: 'environment-storage',
+      name: STORAGE_KEY,
     }
   )
 );

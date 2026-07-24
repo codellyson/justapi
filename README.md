@@ -28,18 +28,26 @@ pnpm start
 
 ## Layout
 
-- `app/` — Next route files (`page.tsx` renders the canvas, `api/proxy` + `api/share` routes, root `layout.tsx`).
-- `src/canvas/` — the whole app:
+- `app/` — Next route files: `page.tsx` renders the canvas; `api/flows` + `api/agent`
+  (the agent bridge), `api/proxy` (+ `multipart`), and `api/share` routes; root `layout.tsx`.
+- `src/canvas/` — the client app:
   - `use-canvas-store.ts` — persisted graphs (nodes/edges/viewport, multiple named canvases).
   - `use-run-store.ts` — in-memory per-node run state (responses are never persisted).
   - `engine.ts` — chain execution: topological upstream resolution, cycle detection, variable/header bindings.
   - `execute-request.ts` — pure send pipeline (auth headers, `{{var}}` substitution, JSON validation).
   - `get-path.ts` — `data.token` / `status` / `headers.etag` extraction from responses.
+  - `flow-spec.ts` / `materialize.ts` — the declarative flow spec (parse/validate) and spec → live graph.
   - `parse-curl.ts` / `parse-openapi.ts` — importers behind the import dialog.
-  - `components/` — request/env nodes, binding edge + inspector, toolbar, import dialog.
+  - `use-agent-sync.ts` — subscribes the browser as the execution host for agent-pushed flows (SSE).
+  - `components/` — request/collection/assert nodes, binding edge + inspector, rail, library, status bar, import dialog.
+- `src/server/` — server-side flow layer:
+  - `agent-hub.ts` — in-memory hub (flows persisted to `.justapi/flows/*.json`); SSE broadcast + run long-polling.
+  - `run-flow-spec.ts` — headless executor that mirrors the browser engine's semantics and report shape.
+- `mcp/server.mjs` — stdio MCP server exposing flows as tools (`pnpm mcp`).
 - `src/stores/use-environment-store.ts` — environments with `{{variable}}` substitution.
 - `src/utils/` — `http` (proxy fetch), `variables`, `har`, theme plumbing.
-- `extension/` — browser extension for capturing requests (HAR export imports into the canvas).
+- `extension/` — standalone MV3 Chrome extension that intercepts `fetch`/`XHR`. Currently not
+  wired to the canvas (the in-app debugger UI was removed); HAR import works from pasted `.har` files.
 
 ## Concepts
 

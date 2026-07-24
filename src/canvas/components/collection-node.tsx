@@ -15,7 +15,6 @@ import {
   List,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { useCollectionsStore } from "../use-collections-store";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
 import type {
   CollectionNode as CollectionNodeType,
@@ -37,13 +36,12 @@ const BRANCH_Y_GAP = 150;
 export const CollectionNodeCard = memo(
   ({ id, data }: NodeProps<CollectionNodeType>) => {
     const {
-      collectionId,
+      name,
       environmentId,
       headers: defaultHeaders,
       authType: defaultAuthType,
       authConfig: defaultAuthConfig,
     } = data as CollectionNodeData;
-    const collections = useCollectionsStore((s) => s.collections);
     const environments = useEnvironmentStore((s) => s.environments);
     const activeEnvironmentId = useEnvironmentStore(
       (s) => s.activeEnvironmentId
@@ -83,7 +81,6 @@ export const CollectionNodeCard = memo(
       setNewHeader("");
     };
 
-    const collection = collections.find((c) => c.id === collectionId);
     const running = run.status === "pending";
     const outgoing = graph.edges.filter((e) => e.source === id).length;
 
@@ -122,7 +119,10 @@ export const CollectionNodeCard = memo(
     };
 
     return (
-      <div className="group w-[264px] rounded-2xl border border-border/40 bg-bg-secondary/95 font-sans text-[13px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color] hover:border-border/70">
+      <div
+        data-tour="origin"
+        className="group w-[264px] rounded-2xl border border-accent/25 bg-gradient-to-b from-bg-secondary/95 to-bg/85 font-sans text-[13px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color] hover:border-accent/40"
+      >
         <Handle
           type="source"
           position={Position.Right}
@@ -136,20 +136,13 @@ export const CollectionNodeCard = memo(
           <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
             origin
           </span>
-          <select
-            className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[12px] uppercase tracking-[0.12em] text-secondary outline-none"
-            value={collectionId}
-            onChange={(e) =>
-              updateNodeData(id, { collectionId: e.target.value })
-            }
-          >
-            {collections.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-            {!collection && <option value={collectionId}>(deleted)</option>}
-          </select>
+          <input
+            className="nodrag min-w-0 flex-1 bg-transparent text-right text-[12px] font-semibold uppercase tracking-[0.12em] text-secondary outline-none placeholder:text-muted/60"
+            value={name}
+            onChange={(e) => updateNodeData(id, { name: e.target.value })}
+            placeholder="collection name"
+            spellCheck={false}
+          />
           <button
             type="button"
             onClick={() => void runFlow(id)}
@@ -168,7 +161,7 @@ export const CollectionNodeCard = memo(
             type="button"
             onClick={() => removeNode(id)}
             className="nodrag rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
-            title="Remove from canvas (collection is kept)"
+            title="Remove origin (its requests become loose until re-adopted)"
           >
             <Trash2 className="h-3 w-3" />
           </button>

@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; padding:0; background:#080A0F; }
+    a{ color:#7C8CFF; text-decoration:none; }
+    a:hover{ color:#9AA6FF; }
+    ::selection{ background:rgba(124,140,255,.28); }
+    ::-webkit-scrollbar{ width:10px; height:10px; }
+    ::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.08); border-radius:20px; border:2px solid transparent; background-clip:padding-box; }
+    ::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.15); background-clip:padding-box; }
+    @keyframes dashmove{ to{ stroke-dashoffset:-28; } }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+    @keyframes pulseRing{ 0%{ box-shadow:0 0 0 0 rgba(124,140,255,.4);} 70%{ box-shadow:0 0 0 12px rgba(124,140,255,0);} 100%{ box-shadow:0 0 0 0 rgba(124,140,255,0);} }
+    @keyframes softPulse{ 0%,100%{ opacity:.5;} 50%{ opacity:1;} }
+    @keyframes ghostFloat{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-5px);} }
+    @keyframes drawerIn{ from{ transform:translateX(24px); opacity:0;} to{ transform:none; opacity:1;} }
+  </style>
+</helmet>
+<div ref="{{ rootRef }}" style="width:100vw; height:100vh; display:flex; background:#080A0F; color:#E8EDF3; font-family:'Geist',system-ui,sans-serif; --brand:#7C8CFF; --brand2:#9AA6FF; --pass:#3ED8A0; --fail:#FB7185; --run:#F5B840; overflow:hidden;">
+
+  <!-- ░░ LEFT RAIL ░░ -->
+  <div style="width:56px; flex:none; display:flex; flex-direction:column; align-items:center; padding:12px 0 14px; gap:4px; border-right:1px solid rgba(255,255,255,.06); background:#0A0D13; position:relative; z-index:30;">
+    <button onClick="{{ showFlow }}" title="JustAPI" style="width:34px; height:34px; border-radius:9px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--brand),#5C6BE0); color:#0A0C10; font-family:'Geist Mono',monospace; font-weight:700; font-size:13px; box-shadow:0 3px 12px rgba(92,107,224,.45);">{ }</button>
+    <div style="width:22px; height:1px; background:rgba(255,255,255,.08); margin:8px 0;"></div>
+
+    <button onClick="{{ showOnboard }}" title="New request" style="{{ railNew }}" style-hover="{{ railHover }}">
+      <span style="{{ railBarNew }}"></span>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button title="Import cURL" style="{{ railIcon }}" style-hover="{{ railHover }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-3.5-3.5M12 14l3.5-3.5"/><path d="M5 18h14"/></svg>
+    </button>
+    <button title="Saved flows" style="{{ railIcon }}" style-hover="{{ railHover }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1z"/></svg>
+    </button>
+    <button onClick="{{ toggleSpec }}" title="Flow spec" style="{{ railSpec }}" style-hover="{{ railHover }}">
+      <span style="{{ railBarSpec }}"></span>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></svg>
+    </button>
+
+    <div style="flex:1;"></div>
+
+    <button title="Canvases" style="{{ railIcon }}" style-hover="{{ railHover }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5-8 4.5-8-4.5L12 3z"/><path d="M4 12l8 4.5 8-4.5M4 16.5l8 4.5 8-4.5"/></svg>
+    </button>
+    <button onClick="{{ startTour }}" title="Take the tour" style="{{ railIcon }}" style-hover="{{ railHover }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.4a2.8 2.8 0 0 1 5.4 1c0 1.9-2.6 2.2-2.6 3.6"/><path d="M12 17.2h.01"/></svg>
+    </button>
+    <button title="Theme" style="{{ railIcon }}" style-hover="{{ railHover }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/></svg>
+    </button>
+  </div>
+
+  <!-- ░░ RIGHT SIDE (canvas + status) ░░ -->
+  <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+    <!-- CANVAS WRAP -->
+    <div style="flex:1; min-height:0; position:relative;">
+
+      <!-- floating control cluster -->
+      <div style="{{ clusterStyle }}">
+        <sc-if value="{{ isAgent }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; align-items:center; gap:6px; padding:6px 11px; border-radius:8px; background:rgba(124,140,255,.1); border:1px solid rgba(124,140,255,.26); color:var(--brand2); font-family:'Geist Mono',monospace; font-size:11px;">
+            <span style="width:6px; height:6px; border-radius:3px; background:var(--brand); animation:softPulse 1.4s ease-in-out infinite;"></span>agent · SSE synced
+          </div>
+        </sc-if>
+        <div style="display:flex; align-items:center; gap:7px; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#5B6472; font-weight:600;">driven by</div>
+        <div style="display:flex; padding:3px; gap:2px; background:rgba(20,24,31,.85); border:1px solid rgba(255,255,255,.08); border-radius:9px; backdrop-filter:blur(8px);">
+          <button onClick="{{ driveYou }}" style="{{ youStyle }}">You</button>
+          <button onClick="{{ driveAgent }}" style="{{ agentStyle }}">Agent</button>
+        </div>
+        <button data-tour="run" onClick="{{ run }}" style="{{ runBtnStyle }}">
+          <span style="{{ runIconStyle }}">{{ runIcon }}</span>
+          <span>{{ runLabel }}</span>
+        </button>
+      </div>
+
+      <!-- ── FLOW BOARD ── -->
+      <sc-if value="{{ isFlow }}" hint-placeholder-val="{{ true }}">
+        <div ref="{{ boardRef }}" style="position:absolute; inset:0; overflow:auto; display:flex; justify-content:center; align-items:flex-start; padding:12px 0; background:#0A0D13; background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px); background-size:26px 26px;">
+          <div style="{{ boardScaleStyle }}">
+            <!-- wires -->
+            <svg width="1660" height="1200" style="position:absolute; inset:0; overflow:visible; pointer-events:none;">
+              <sc-for list="{{ wires }}" as="w" hint-placeholder-count="8">
+                <g>
+                  <path d="{{ w.d }}" fill="none" style="{{ w.baseStyle }}"></path>
+                  <path d="{{ w.d }}" fill="none" style="{{ w.flowStyle }}"></path>
+                </g>
+              </sc-for>
+            </svg>
+            <sc-for list="{{ wireLabels }}" as="wl" hint-placeholder-count="2">
+              <div data-tour="bind" style="{{ wl.style }}"><span style="color:#7A8494;">{{ wl.pre }}</span><span style="color:var(--brand2);">{{ wl.var }}</span></div>
+            </sc-for>
+
+            <!-- ORIGIN -->
+            <div data-tour="origin" style="{{ origin.cardStyle }}">
+              <div style="display:flex; align-items:center; gap:8px; padding:10px 13px; border-bottom:1px solid rgba(255,255,255,.06);">
+                <span style="font-size:13px; color:var(--brand2);">⬡</span>
+                <span style="font-family:'Geist Mono',monospace; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:#6B7482; font-weight:600;">origin</span>
+                <span style="font-size:11.5px; font-weight:600; color:#C6CED9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Authenticated Todos</span>
+                <span style="margin-left:auto; color:#5B6472; font-size:12px; cursor:pointer;">↻</span>
+              </div>
+              <div style="padding:9px 13px; display:flex; flex-direction:column; gap:2px;">
+                <div style="display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12px;"><span style="color:#5B6472; font-size:9px;">▸</span><span style="color:#8A94A4;">env</span><span style="margin-left:auto; display:flex; align-items:center; gap:4px; font-family:'Geist Mono',monospace; font-size:11px; color:#C6CED9;">Local <span style="color:#5B6472;">▾</span></span></div>
+                <div style="display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12px; border-top:1px solid rgba(255,255,255,.045);"><span style="color:#5B6472; font-size:9px;">▸</span><span style="color:#8A94A4;">auth</span><span style="margin-left:auto; display:flex; align-items:center; gap:4px; font-family:'Geist Mono',monospace; font-size:11px; color:var(--brand2);">Bearer {{ tokenVar }} <span style="color:#5B6472;">▾</span></span></div>
+                <div style="display:flex; align-items:center; gap:8px; padding:5px 0; font-size:12px; border-top:1px solid rgba(255,255,255,.045);"><span style="color:#5B6472; font-size:9px;">▸</span><span style="color:#8A94A4;">headers</span><span style="margin-left:auto; font-family:'Geist Mono',monospace; font-size:10.5px; color:#5B6472;">1</span></div>
+              </div>
+              <div style="padding:8px 13px; border-top:1px solid rgba(255,255,255,.06);">
+                <div style="display:flex; align-items:center; gap:7px; color:var(--brand2); font-size:12px; font-weight:500; cursor:pointer;"><span style="font-size:13px;">＋</span> add request</div>
+              </div>
+              <div style="{{ origin.footStyle }}">
+                <span style="{{ origin.footDot }}"></span>{{ origin.footText }}
+              </div>
+            </div>
+
+            <!-- REQUEST CARDS -->
+            <sc-for list="{{ requests }}" as="r" hint-placeholder-count="4">
+              <div data-tour="request" style="{{ r.cardStyle }}">
+                <div style="display:flex; align-items:center; gap:8px; padding:9px 12px 8px; background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));">
+                  <span style="{{ r.hostDotStyle }}"></span>
+                  <span style="font-family:'Geist Mono',monospace; font-size:9.5px; letter-spacing:.06em; color:#7B8492; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ r.host }}</span>
+                  <span style="{{ r.flowTagStyle }}">↳ authenticated-todos</span>
+                  <span style="margin-left:auto;"></span>
+                  <span style="{{ r.spinStyle }}"></span>
+                  <button onClick="{{ run }}" style="{{ r.runBtnStyle }}" title="Run this node">▶</button>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; padding:11px 12px 12px;">
+                  <span style="{{ r.methodStyle }}">{{ r.method }}</span>
+                  <span style="font-family:'Geist Mono',monospace; font-size:13.5px; font-weight:500; color:#E4E9F0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ r.path }}</span>
+                  <span style="margin-left:auto; font-size:10.5px; color:#5B6472; flex:none;">{{ r.label }}</span>
+                </div>
+                <div style="display:flex; gap:15px; padding:7px 13px; background:rgba(255,255,255,.018); border-top:1px solid rgba(255,255,255,.05); font-family:'Geist Mono',monospace; font-size:10px;">
+                  <span style="color:#8A94A4;">headers</span>
+                  <span style="{{ r.bodyTabStyle }}">{{ r.bodyTab }}</span>
+                  <span style="{{ r.authStyle }}">{{ r.authLabel }}</span>
+                </div>
+                <div style="{{ r.respHeadStyle }}">
+                  <span style="font-size:9px; color:#5B6472;">▾</span>
+                  <span style="{{ r.statusStyle }}">{{ r.statusText }}</span>
+                  <span style="font-size:11px; color:{{ r.statusWordColor }};">{{ r.statusWord }}</span>
+                  <span style="{{ r.secretChipStyle }}">secret</span>
+                  <span style="margin-left:auto; font-family:'Geist Mono',monospace; font-size:10px; color:#5B6472;">{{ r.metaText }}</span>
+                </div>
+                <pre style="{{ r.bodyStyle }}">{{ r.bodyText }}</pre>
+              </div>
+            </sc-for>
+
+            <!-- ASSERT NODES -->
+            <sc-for list="{{ asserts }}" as="a" hint-placeholder-count="4">
+              <div data-tour="assert" style="{{ a.cardStyle }}">
+                <div style="display:flex; align-items:center; gap:7px; padding:8px 12px; border-bottom:1px solid rgba(255,255,255,.05);">
+                  <span style="{{ a.iconStyle }}">◇</span>
+                  <span style="font-family:'Geist Mono',monospace; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#6B7482; font-weight:600;">assert</span>
+                  <span style="{{ a.passStyle }}">{{ a.passText }}</span>
+                </div>
+                <div style="padding:8px 10px; display:flex; flex-direction:column; gap:6px;">
+                  <sc-for list="{{ a.rows }}" as="row" hint-placeholder-count="1">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                      <span style="{{ row.dotStyle }}"></span>
+                      <span style="font-family:'Geist Mono',monospace; font-size:11px; color:#C6CED9; min-width:0; flex:none;">{{ row.field }}</span>
+                      <span style="{{ row.opStyle }}">{{ row.op }} <span style="color:#5B6472; font-size:8px;">▾</span></span>
+                      <span style="{{ row.valStyle }}">{{ row.val }}</span>
+                      <span style="margin-left:auto; color:#4A525E; font-size:11px; cursor:pointer;">×</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex; align-items:center; gap:6px; color:#5B6472; font-size:11px; cursor:pointer; padding-top:1px;"><span style="font-size:11px;">＋</span> add check</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── ONBOARDING ── -->
+      <sc-if value="{{ isOnboard }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute; inset:0; overflow:auto; background:#0A0D13; background-image:radial-gradient(rgba(255,255,255,.045) 1px, transparent 1px); background-size:26px 26px; display:flex; align-items:center; justify-content:center;">
+          <div style="width:840px; max-width:92%; padding:40px 0;">
+            <div style="text-align:center; margin-bottom:32px;">
+              <div style="font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--brand2); font-weight:600; margin-bottom:12px;">new canvas</div>
+              <div style="font-size:26px; font-weight:600; letter-spacing:-.5px; margin-bottom:10px;">A flow is a tree of requests you can watch run.</div>
+              <div style="font-size:14px; color:#98A2B0; line-height:1.5; max-width:520px; margin:0 auto; text-wrap:pretty;">Branch a request off the origin, bind a value into the next, hang an assertion — or hand the whole board to an agent.</div>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:center; margin-bottom:36px;">
+              <div style="width:150px; height:112px; border-radius:14px; border:1.5px dashed rgba(124,140,255,.5); background:rgba(124,140,255,.05); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; animation:pulseRing 2.4s ease-out infinite;">
+                <span style="font-size:15px; color:var(--brand2);">⬡</span>
+                <span style="font-weight:600; font-size:13px;">origin</span>
+                <span style="font-size:10.5px; color:#7A8494; font-family:'Geist Mono',monospace;">authenticated-todos</span>
+              </div>
+              <svg width="90" height="112" style="overflow:visible;"><path d="M0 56 C40 56, 50 56, 90 56" fill="none" stroke="rgba(124,140,255,.4)" stroke-width="1.5" stroke-dasharray="5 6" style="animation:dashmove 1s linear infinite;"></path></svg>
+              <div style="width:190px; height:112px; border-radius:14px; border:1.5px dashed rgba(255,255,255,.14); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; color:#5B6472; animation:ghostFloat 3s ease-in-out infinite;">
+                <span style="font-size:22px; font-weight:300; line-height:1;">＋</span>
+                <span style="font-size:12px; font-weight:500;">your first request</span>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:14px;">
+              <div style="{{ obCardA }}" onClick="{{ showFlow }}">
+                <div style="width:34px; height:34px; border-radius:9px; background:rgba(124,140,255,.12); border:1px solid rgba(124,140,255,.22); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:16px;">↳</div>
+                <div style="font-size:14px; font-weight:600; margin-bottom:6px;">Draw a request</div>
+                <div style="font-size:12px; color:#7A8494; line-height:1.5; text-wrap:pretty;">Pull a wire off the origin. Method, path, done — the host colours itself.</div>
+              </div>
+              <div style="{{ obCardB }}" onClick="{{ showFlow }}">
+                <div style="width:34px; height:34px; border-radius:9px; background:rgba(90,169,240,.1); border:1px solid rgba(90,169,240,.24); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-family:'Geist Mono',monospace; font-size:12px; color:#5AA9F0;">$_</div>
+                <div style="font-size:14px; font-weight:600; margin-bottom:6px;">Paste a cURL or URL</div>
+                <div style="font-size:12px; color:#7A8494; line-height:1.5; text-wrap:pretty;">We parse it into a node — headers, body and auth land where they belong.</div>
+              </div>
+              <div style="{{ obCardC }}" onClick="{{ driveAgentFromOnboard }}">
+                <div style="width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,rgba(124,140,255,.2),rgba(197,140,255,.18)); border:1px solid rgba(124,140,255,.3); display:flex; align-items:center; justify-content:center; margin-bottom:14px; font-size:15px;">✦</div>
+                <div style="font-size:14px; font-weight:600; margin-bottom:6px;">Let an agent build it</div>
+                <div style="font-size:12px; color:#7A8494; line-height:1.5; text-wrap:pretty;"><span style="font-family:'Geist Mono',monospace; color:var(--brand2);">push_and_run_flow</span> over MCP. You watch it materialise.</div>
+              </div>
+            </div>
+            <div style="text-align:center; margin-top:26px; font-size:12px; color:#5B6472;">or start from a template — <a href="#" onClick="{{ showFlow }}">Authenticated Todos</a></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ── SPEC DRAWER ── -->
+      <sc-if value="{{ specOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; top:0; right:0; bottom:0; width:376px; z-index:26; border-left:1px solid rgba(255,255,255,.08); background:#0B0E15; display:flex; flex-direction:column; box-shadow:-24px 0 60px -30px rgba(0,0,0,.8); animation:drawerIn .22s ease;">
+          <div style="padding:16px 18px 12px; border-bottom:1px solid rgba(255,255,255,.06);">
+            <div style="display:flex; align-items:center; gap:9px;">
+              <span style="font-size:13.5px; font-weight:600;">Flow spec</span>
+              <span style="font-family:'Geist Mono',monospace; font-size:10px; padding:2px 7px; border-radius:5px; background:rgba(124,140,255,.12); color:var(--brand2); border:1px solid rgba(124,140,255,.2);">justapiFlow: 1</span>
+              <span onClick="{{ toggleSpec }}" style="margin-left:auto; color:#5B6472; font-size:16px; cursor:pointer;">×</span>
+            </div>
+            <div style="font-size:11.5px; line-height:1.5; color:#7A8494; margin-top:8px; text-wrap:pretty;">This board is a document. Agents read &amp; write the same spec through three doors — a human watches it run.</div>
+          </div>
+          <div style="display:flex; gap:2px; padding:8px 12px 0; border-bottom:1px solid rgba(255,255,255,.06);">
+            <button onClick="{{ tabSpecFn }}" style="{{ tabSpecStyle }}">Spec</button>
+            <button onClick="{{ tabHttpFn }}" style="{{ tabHttpStyle }}">HTTP</button>
+            <button onClick="{{ tabFilesFn }}" style="{{ tabFilesStyle }}">Files</button>
+            <button onClick="{{ tabMcpFn }}" style="{{ tabMcpStyle }}">MCP</button>
+          </div>
+          <div style="flex:1; min-height:0; overflow:auto; padding:16px 18px;">
+            <sc-if value="{{ tabSpec }}" hint-placeholder-val="{{ true }}">
+              <pre style="margin:0; font-family:'Geist Mono',monospace; font-size:11px; line-height:1.65; color:#98A2B0; white-space:pre-wrap;"><span style="color:#8FA0FF;">name</span>: <span style="color:#57D9C0;">"Authenticated Todos"</span>
+<span style="color:#8FA0FF;">environment</span>:
+  base: <span style="color:#57D9C0;">"https://jsonplaceholder.typicode.com"</span>
+<span style="color:#8FA0FF;">defaults</span>:
+  auth: <span style="color:#57D9C0;">"Bearer {{ tokenVar }}"</span>   <span style="color:#4A525E;"># inherited</span>
+<span style="color:#8FA0FF;">requests</span>:
+  - <span style="color:#8FA0FF;">post</span>: <span style="color:#57D9C0;">"{{ baseVar }}/auth/login"</span>   <span style="color:#4A525E;"># no auth yet</span>
+    <span style="color:#8FA0FF;">bind</span>: { token: <span style="color:#F0A94A;">data.access_token</span> }
+    <span style="color:#8FA0FF;">assert</span>: [ status = <span style="color:#F0A94A;">200</span>, data.access_token ]
+  - <span style="color:#8FA0FF;">post</span>: <span style="color:#57D9C0;">"{{ baseVar }}/todos"</span>
+    <span style="color:#8FA0FF;">bind</span>: { todoId: <span style="color:#F0A94A;">data.id</span> }
+    <span style="color:#8FA0FF;">assert</span>: [ status = <span style="color:#F0A94A;">201</span>, data.id ]
+  - <span style="color:#8FA0FF;">get</span>: <span style="color:#57D9C0;">"{{ baseVar }}/todos/{{ todoVar }}"</span>
+    <span style="color:#8FA0FF;">assert</span>: [ status = <span style="color:#F0A94A;">200</span> ]
+  - <span style="color:#8FA0FF;">put</span>: <span style="color:#57D9C0;">"{{ baseVar }}/todos/{{ todoVar }}"</span>
+    <span style="color:#8FA0FF;">assert</span>: [ status = <span style="color:#F0A94A;">200</span>, data.title~ ]
+  - <span style="color:#8FA0FF;">delete</span>: <span style="color:#57D9C0;">"{{ baseVar }}/todos/{{ todoVar }}"</span>
+    <span style="color:#8FA0FF;">assert</span>: [ status = <span style="color:#F0A94A;">200</span> ]</pre>
+            </sc-if>
+            <sc-if value="{{ tabHttp }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:16px;">
+                <div>
+                  <div style="font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#5B6472; font-weight:600; margin-bottom:8px;">1 · push the spec</div>
+                  <div style="font-family:'Geist Mono',monospace; font-size:11px; line-height:1.6; background:#080B10; border:1px solid rgba(255,255,255,.07); border-radius:9px; padding:12px 13px; color:#B9C2CE;"><span style="color:#F0A94A;">POST</span> /api/flows<br><span style="color:#5B6472;">← { slug: </span><span style="color:#57D9C0;">"authenticated-todos"</span><span style="color:#5B6472;"> }</span></div>
+                </div>
+                <div>
+                  <div style="font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#5B6472; font-weight:600; margin-bottom:8px;">2 · run it</div>
+                  <div style="font-family:'Geist Mono',monospace; font-size:11px; line-height:1.6; background:#080B10; border:1px solid rgba(255,255,255,.07); border-radius:9px; padding:12px 13px; color:#B9C2CE;"><span style="color:#F0A94A;">POST</span> /api/flows/authenticated-todos/run<br><span style="color:#5B6472;">← report { passed: </span><span style="color:#3ED8A0;">5</span><span style="color:#5B6472;">, checks: </span><span style="color:#3ED8A0;">8</span><span style="color:#5B6472;"> }</span></div>
+                </div>
+                <div style="font-size:11.5px; line-height:1.5; color:#7A8494; text-wrap:pretty;">Two curls in CI. Same report shape whether a human watched the canvas or not.</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ tabFiles }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:12px;">
+                <div style="font-family:'Geist Mono',monospace; font-size:11px; color:#B9C2CE; background:#080B10; border:1px solid rgba(255,255,255,.07); border-radius:9px; padding:12px 13px;">
+                  <div style="color:#5B6472;">.justapi/flows/</div>
+                  <div style="padding-left:14px; margin-top:3px; display:flex; align-items:center; gap:7px;"><span style="color:var(--brand2);">authenticated-todos.json</span><span style="font-size:9px; color:#4A525E;">· 2.1 KB</span></div>
+                  <div style="padding-left:14px; margin-top:2px; color:#4A525E;">checkout.json</div>
+                  <div style="padding-left:14px; margin-top:2px; color:#4A525E;">smoke.json</div>
+                </div>
+                <div style="font-size:11.5px; line-height:1.55; color:#7A8494; text-wrap:pretty;">Every flow persists as a plain file. Edit it, re-POST it, or commit it — the canvas picks up the change.</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ tabMcp }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex; flex-direction:column; gap:9px;">
+                <div style="font-family:'Geist Mono',monospace; font-size:10.5px; color:#5B6472; margin-bottom:1px;">mcp/server.mjs</div>
+                <div style="display:flex; flex-direction:column; gap:7px;">
+                  <div style="display:flex; align-items:center; gap:9px; padding:9px 11px; background:#080B10; border:1px solid rgba(255,255,255,.07); border-radius:8px;"><span style="font-family:'Geist Mono',monospace; font-size:11px; color:var(--brand2);">push_flow</span><span style="font-size:10.5px; color:#7A8494; margin-left:auto;">upsert a spec</span></div>
+                  <div style="display:flex; align-items:center; gap:9px; padding:9px 11px; background:#080B10; border:1px solid rgba(255,255,255,.07); border-radius:8px;"><span style="font-family:'Geist Mono',monospace; font-size:11px; color:var(--brand2);">run_flow</span><span style="font-size:10.5px; color:#7A8494; margin-left:auto;">execute + report</span></div>
+                  <div style="display:flex; align-items:center; gap:9px; padding:10px 11px; background:rgba(124,140,255,.08); border:1px solid rgba(124,140,255,.24); border-radius:8px;"><span style="font-family:'Geist Mono',monospace; font-size:11px; color:var(--brand2); font-weight:600;">push_and_run_flow</span><span style="font-size:10.5px; color:#9AA6FF; margin-left:auto;">one call</span></div>
+                </div>
+                <div style="font-family:'Geist Mono',monospace; font-size:10.5px; line-height:1.6; background:#080B10; border:1px solid rgba(255,255,255,.07); border-radius:9px; padding:11px 13px; color:#B9C2CE; margin-top:3px;"><span style="color:#5B6472;">→ agent calls</span><br>push_and_run_flow(<span style="color:#57D9C0;">spec</span>)<br><span style="color:#5B6472;">→</span> <span style="color:#3ED8A0;">"5 passed · 8 checks ✓"</span></div>
+                <div style="font-size:11.5px; line-height:1.55; color:#7A8494; text-wrap:pretty; margin-top:1px;">The spec reference lives in the tool descriptions — the agent already knows the contract.</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <!-- ░░ STATUS BAR ░░ -->
+    <div style="height:32px; flex:none; display:flex; align-items:center; gap:16px; padding:0 14px; border-top:1px solid rgba(255,255,255,.06); background:#0A0D13; font-size:11.5px;">
+      <span style="font-family:'Geist Mono',monospace; color:#5B6472; letter-spacing:.03em;">JUSTAPI/1.1</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="{{ barDotStyle }}"></span>
+        <span style="{{ barVerdictStyle }}">{{ barVerdict }}</span>
+      </div>
+      <div style="flex:1;"></div>
+      <span style="font-family:'Geist Mono',monospace; color:#5B6472;">env <span style="color:#8A94A4;">local</span></span>
+      <span style="font-family:'Geist Mono',monospace; color:#5B6472;">5 nodes</span>
+      <span style="font-family:'Geist Mono',monospace; color:#5B6472;">2 binds</span>
+      <div style="display:flex; align-items:center; gap:4px; padding-left:8px; border-left:1px solid rgba(255,255,255,.08);">
+        <button onClick="{{ zoomOut }}" style="{{ zoomBtn }}">−</button>
+        <span style="font-family:'Geist Mono',monospace; color:#8A94A4; min-width:38px; text-align:center;">{{ zoomPct }}%</span>
+        <button onClick="{{ zoomIn }}" style="{{ zoomBtn }}">＋</button>
+        <button onClick="{{ zoomFit }}" title="Fit" style="{{ zoomBtn }}">⤢</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ░░ FIRST-RUN WELCOME ░░ -->
+  <sc-if value="{{ tourWelcome }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:rgba(6,8,12,.72); backdrop-filter:blur(5px);">
+      <div style="width:468px; max-width:92%; background:#0E131B; border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:30px 30px 26px; box-shadow:0 30px 80px -24px rgba(0,0,0,.9);">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+          <div style="width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,var(--brand),#5C6BE0); display:flex; align-items:center; justify-content:center; color:#0A0C10; font-family:'Geist Mono',monospace; font-weight:700; font-size:13px; box-shadow:0 3px 12px rgba(92,107,224,.45);">{ }</div>
+          <span style="font-family:'Geist Mono',monospace; font-weight:600; font-size:14px;">JustAPI</span>
+          <span style="margin-left:auto; font-family:'Geist Mono',monospace; font-size:10.5px; color:#5B6472;">first run</span>
+        </div>
+        <div style="font-size:22px; font-weight:600; letter-spacing:-.4px; margin-bottom:10px; text-wrap:pretty;">Draw your API as a flow you can watch run.</div>
+        <div style="font-size:13.5px; line-height:1.55; color:#98A2B0; margin-bottom:22px; text-wrap:pretty;">Requests branch into a tree, values bind between them, assertions grade the result. Built to stay legible to you <span style="color:var(--brand2);">and</span> the agents driving it.</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button onClick="{{ tourBegin }}" style="flex:1; padding:11px; border-radius:10px; border:none; cursor:pointer; font-family:'Geist',sans-serif; font-size:13.5px; font-weight:600; color:#0A0C10; background:linear-gradient(135deg,var(--brand2),var(--brand)); box-shadow:0 4px 16px -5px rgba(124,140,255,.55);">Take the 60-second tour</button>
+          <button onClick="{{ tourSkip }}" style="padding:11px 16px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:transparent; cursor:pointer; font-family:'Geist',sans-serif; font-size:13.5px; font-weight:500; color:#98A2B0;">Skip</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ░░ COACH-MARK TOUR ░░ -->
+  <sc-if value="{{ tourActive }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; z-index:48;"></div>
+    <div style="{{ spotStyle }}"></div>
+    <div style="{{ tipStyle }}">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+        <span style="font-family:'Geist Mono',monospace; font-size:10px; color:var(--brand2); letter-spacing:.1em;">{{ tourIndex }} / {{ tourTotal }}</span>
+        <span onClick="{{ tourSkip }}" style="margin-left:auto; font-size:11px; color:#5B6472; cursor:pointer;">Skip tour</span>
+      </div>
+      <div style="font-size:15px; font-weight:600; letter-spacing:-.2px; margin-bottom:6px;">{{ tourTitle }}</div>
+      <div style="font-size:12.5px; line-height:1.5; color:#98A2B0; margin-bottom:15px; text-wrap:pretty;">{{ tourBody }}</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="display:flex; align-items:center; gap:5px;">
+          <sc-for list="{{ tourDots }}" as="d" hint-placeholder-count="5"><span style="{{ d.style }}"></span></sc-for>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button onClick="{{ tourBack }}" style="{{ tourBackStyle }}">Back</button>
+          <button onClick="{{ tourNext }}" style="padding:7px 15px; border-radius:8px; border:none; cursor:pointer; font-family:'Geist',sans-serif; font-size:12.5px; font-weight:600; color:#0A0C10; background:linear-gradient(135deg,var(--brand2),var(--brand));">{{ tourNextLabel }}</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#7C8CFF&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#7C8CFF&quot;,&quot;#39D9C4&quot;,&quot;#58A6FF&quot;,&quot;#C58CFF&quot;,&quot;#4ADE80&quot;],&quot;section&quot;:&quot;Appearance&quot;},&quot;startTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;mcp&quot;,&quot;options&quot;:[&quot;spec&quot;,&quot;http&quot;,&quot;files&quot;,&quot;mcp&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Flow spec panel&quot;},&quot;autoplayAgent&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  state = {
+    view: 'flow',
+    driver: 'you',
+    panelTab: null,
+    specOpen: false,
+    running: false,
+    ns: { origin:'idle', login:'idle', create:'idle', read:'idle', update:'idle', delete:'idle' },
+    carry: {},
+    verdict: 'idle',
+    fit: 1,
+    zoom: 1,
+    tourStep: -1,
+    tourWelcome: false,
+    spot: null,
+  };
+
+  tourSteps = [
+    { sel:'[data-tour="origin"]', title:'Start at the origin', body:'Every flow grows from here. It carries your environment and auth — and any Bearer default flows down to each request automatically.' },
+    { sel:'[data-tour="request"]', title:'Requests branch off it', body:'Each node is one call — method, path, and the live response inline. The eyebrow shows which host it talks to.' },
+    { sel:'[data-tour="bind"]', title:'Bind values between calls', body:'Pull a value out of one response and feed it into the next as a {{variable}}. Here the login token flows into every protected request.' },
+    { sel:'[data-tour="assert"]', title:'Assert what matters', body:'Hang checks off a request — status, a field, a value. They grade live and roll up into one verdict.' },
+    { sel:'[data-tour="run"]', title:'Run it — or let an agent', body:'Watch the whole tree execute end to end. Flip to Agent and the same board runs from a single MCP call while you watch.' },
+  ];
+
+  timers = [];
+  boardRef = React.createRef();
+  rootRef = React.createRef();
+
+  applyAccent(){
+    const el = this.rootRef.current; if(!el) return;
+    const a = this.props.accent || '#7C8CFF';
+    el.style.setProperty('--brand', a);
+    el.style.setProperty('--brand2', this.lighten(a));
+  }
+  lighten(hex){
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex); if(!m) return hex;
+    let n = parseInt(m[1],16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    r=Math.round(r+(255-r)*0.3); g=Math.round(g+(255-g)*0.3); b=Math.round(b+(255-b)*0.3);
+    return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  }
+
+  measure = () => {
+    const el = this.boardRef.current; if(!el) return;
+    const s = Math.max(0.4, Math.min(1, (el.clientWidth - 40) / 1660, (el.clientHeight - 24) / 1200));
+    if(Math.abs(s - this.state.fit) > 0.004) this.setState({ fit: s });
+  };
+  componentDidMount(){
+    this.measure(); this.applyAccent();
+    this.ro = new ResizeObserver(this.measure);
+    if(this.boardRef.current) this.ro.observe(this.boardRef.current);
+    window.addEventListener('resize', this.measureSpot);
+    try{ if(!localStorage.getItem('justapi_seen_tour')) this.setState({ tourWelcome:true }); }catch(e){}
+  }
+  componentDidUpdate(prev){ this.applyAccent(); if(prev && prev.state && prev.state.view !== this.state.view) this.measure(); }
+  componentWillUnmount(){ this.timers.forEach(clearTimeout); if(this.ro) this.ro.disconnect(); window.removeEventListener('resize', this.measureSpot); }
+
+  measureSpot = () => {
+    if(this.state.tourStep < 0){ return; }
+    const step = this.tourSteps[this.state.tourStep];
+    const root = this.rootRef.current; if(!root) return;
+    const el = root.querySelector(step.sel);
+    if(!el){ this.setState({ spot:null }); return; }
+    const r = el.getBoundingClientRect(), pad = 8;
+    const place = (r.bottom + 210 < window.innerHeight) ? 'below' : 'above';
+    this.setState({ spot:{ x:r.left-pad, y:r.top-pad, w:r.width+pad*2, h:r.height+pad*2, top:r.top, bottom:r.bottom, cx:r.left + r.width/2, place } });
+  };
+  seen(){ try{ localStorage.setItem('justapi_seen_tour','1'); }catch(e){} }
+  startTour = () => this.setState({ tourWelcome:true });
+  tourBegin = () => { this.setState({ tourWelcome:false, specOpen:false, tourStep:0 }); this.at(60, this.measureSpot); };
+  tourNext = () => { const n = this.state.tourStep + 1; if(n >= this.tourSteps.length) return this.tourFinish(); this.setState({ tourStep:n }); this.at(50, this.measureSpot); };
+  tourBack = () => { const n = Math.max(0, this.state.tourStep - 1); this.setState({ tourStep:n }); this.at(50, this.measureSpot); };
+  tourSkip = () => { this.seen(); this.setState({ tourWelcome:false, tourStep:-1, spot:null }); };
+  tourFinish = () => { this.seen(); this.setState({ tourStep:-1, spot:null }); this.at(120, this.run); };
+  at(ms, fn){ this.timers.push(setTimeout(fn, ms)); }
+
+  reset = () => {
+    this.timers.forEach(clearTimeout); this.timers = [];
+    this.setState({ running:false, ns:{ origin:'idle', login:'idle', create:'idle', read:'idle', update:'idle', delete:'idle' }, carry:{}, verdict:'idle' });
+  };
+  setNS(id, v){ this.setState(s => ({ ns: { ...s.ns, [id]: v } })); }
+  setCarry(id, v){ this.setState(s => ({ carry: { ...s.carry, [id]: v } })); }
+
+  run = () => {
+    this.timers.forEach(clearTimeout); this.timers = [];
+    this.setState({ view:'flow', running:true, ns:{ origin:'idle', login:'idle', create:'idle', read:'idle', update:'idle', delete:'idle' }, carry:{}, verdict:'running' });
+    this.at(120,  () => this.setNS('origin','running'));
+    this.at(440,  () => { this.setNS('origin','done'); this.setCarry('o-login', true); });
+    this.at(1000, () => { this.setNS('login','running'); this.setCarry('o-login', false); });
+    this.at(1750, () => this.setNS('login','done'));
+    this.at(1980, () => this.setCarry('login-create', true));
+    this.at(2480, () => { this.setNS('create','running'); this.setCarry('login-create', false); });
+    this.at(3200, () => this.setNS('create','done'));
+    this.at(3420, () => this.setCarry('create-read', true));
+    this.at(3880, () => { this.setNS('read','running'); this.setCarry('create-read', false); });
+    this.at(4520, () => this.setNS('read','done'));
+    this.at(4720, () => this.setCarry('read-update', true));
+    this.at(5180, () => { this.setNS('update','running'); this.setCarry('read-update', false); });
+    this.at(5860, () => this.setNS('update','done'));
+    this.at(6060, () => this.setCarry('update-delete', true));
+    this.at(6480, () => { this.setNS('delete','running'); this.setCarry('update-delete', false); });
+    this.at(7120, () => { this.setNS('delete','done'); this.setState({ running:false, verdict:'pass' }); });
+  };
+
+  showFlow = () => this.setState({ view:'flow' });
+  showOnboard = () => this.setState({ view:'onboarding' });
+  toggleSpec = () => this.setState(s => ({ specOpen: !s.specOpen }));
+  driveYou = () => this.setState({ driver:'you' });
+  driveAgent = () => { this.setState({ driver:'agent' }); if(this.props.autoplayAgent !== false) this.run(); };
+  driveAgentFromOnboard = () => { this.setState({ view:'flow', driver:'agent' }); this.at(260, this.run); };
+  setTab(t){ this.setState({ panelTab:t }); }
+  zoomIn = () => this.setState(s => ({ zoom: Math.min(2.2, s.zoom + 0.12) }));
+  zoomOut = () => this.setState(s => ({ zoom: Math.max(0.5, s.zoom - 0.12) }));
+  zoomFit = () => this.setState({ zoom: 1 });
+
+  L = {
+    origin: { x:40,  y:300, w:228 },
+    login:  { x:360, y:180, w:300 },
+    create: { x:820, y:180, w:300 },
+    read:   { x:1280,y:180, w:300 },
+    update: { x:1280,y:720, w:300 },
+    delete: { x:820, y:720, w:300 },
+    aLogin:{ x:380, y:470, w:266 }, aCreate:{ x:840, y:470, w:266 }, aRead:{ x:1300,y:470, w:214 },
+    aUpdate:{ x:1300,y:1010,w:266 }, aDelete:{ x:840, y:1010,w:214 },
+  };
+  hbez(x1,y1,x2,y2){ const dx=(x2-x1)*0.5; return `M ${x1} ${y1} C ${x1+dx} ${y1}, ${x2-dx} ${y2}, ${x2} ${y2}`; }
+  vbez(x1,y1,x2,y2){ const dy=(y2-y1)*0.5; return `M ${x1} ${y1} C ${x1} ${y1+dy}, ${x2} ${y2-dy}, ${x2} ${y2}`; }
+
+  seg(active){ return { padding:'5px 13px', borderRadius:'7px', border:'none', cursor:'pointer', fontFamily:"'Geist',sans-serif", fontSize:'12.5px', fontWeight:600,
+    background: active ? 'rgba(255,255,255,.12)' : 'transparent', color: active ? '#E8EDF3' : '#7A8494', transition:'all .15s' }; }
+  tab(active){ return { padding:'8px 11px 10px', border:'none', background:'transparent', cursor:'pointer', fontFamily:"'Geist',sans-serif", fontSize:'12px', fontWeight:600,
+    color: active ? '#E8EDF3' : '#5B6472', borderBottom: active ? '2px solid var(--brand)' : '2px solid transparent', marginBottom:'-1px', transition:'color .15s' }; }
+  rail(active){ return { position:'relative', width:'38px', height:'38px', borderRadius:'10px', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+    background: active ? 'rgba(124,140,255,.14)' : 'transparent', color: active ? 'var(--brand2)' : '#727C8C', transition:'background .15s, color .15s' }; }
+  railBar(active){ return { position:'absolute', left:'-13px', top:'50%', transform:'translateY(-50%)', width:'3px', height: active?'18px':'0', borderRadius:'0 3px 3px 0', background:'var(--brand)', transition:'height .18s' }; }
+  ob(){ return { padding:'20px 18px', borderRadius:'14px', background:'#0F141C', border:'1px solid rgba(255,255,255,.07)', cursor:'pointer', transition:'all .15s' }; }
+
+  renderVals(){
+    const { view, driver, running, ns, carry, verdict, specOpen } = this.state;
+    const panelTab = this.state.panelTab || this.props.startTab || 'mcp';
+    const L = this.L, isAgent = driver === 'agent';
+    const methodColors = { GET:'#5AA9F0', POST:'#F0A94A', PUT:'#E8A657', DELETE:'#FB7185' };
+
+    const defs = [
+      { id:'login', node:L.login, host:'auth.acme.dev', method:'POST', path:'{{base}}/auth/login', label:'authenticate',
+        bodyTab:'body-json', code:'200', word:'ok', meta:'132 ms · 214 B', auth:'creds',
+        body:'{\n  "access_token": "••••••••••••",\n  "token_type": "Bearer",\n  "expires_in": 3600\n}' },
+      { id:'create', node:L.create, host:'jsonplaceholder.typi…', method:'POST', path:'{{base}}/todos', label:'create todo',
+        bodyTab:'body-json', code:'201', word:'created', meta:'888 ms · 65 B', auth:'inherited',
+        body:'{\n  "title": "agent-made todo",\n  "completed": false,\n  "userId": 1,\n  "id": 201\n}' },
+      { id:'read', node:L.read, host:'jsonplaceholder.typi…', method:'GET', path:'{{base}}/todos/{{todoId}}', label:'read todo',
+        bodyTab:'body', code:'200', word:'ok', meta:'200 ms · 66 B', auth:'inherited',
+        body:'{\n  "userId": 1,\n  "id": 201,\n  "title": "agent-made todo",\n  "completed": false\n}' },
+      { id:'update', node:L.update, host:'jsonplaceholder.typi…', method:'PUT', path:'{{base}}/todos/{{todoId}}', label:'update todo',
+        bodyTab:'body-json', code:'200', word:'ok', meta:'294 ms · 63 B', auth:'inherited',
+        body:'{\n  "id": 201,\n  "title": "updated by agent",\n  "completed": true,\n  "userId": 1\n}' },
+      { id:'delete', node:L.delete, host:'jsonplaceholder.typi…', method:'DELETE', path:'{{base}}/todos/{{todoId}}', label:'delete todo',
+        bodyTab:'body', code:'200', word:'ok', meta:'296 ms · 2 B', auth:'inherited', body:'{}' },
+    ];
+
+    const requests = defs.map(d => {
+      const st = ns[d.id], done = st==='done', run_ = st==='running', active = done||run_;
+      const mc = methodColors[d.method];
+      let hh=0; for(const ch of d.host) hh=(hh*31+ch.charCodeAt(0))>>>0; const hue=hh%360;
+      const accent = 'hsl('+hue+' 46% 64%)';
+      const idleBorder = 'hsla('+hue+',40%,60%,.16)';
+      const cardStyle = { position:'absolute', left:d.node.x+'px', top:d.node.y+'px', width:d.node.w+'px',
+        background:'linear-gradient(180deg,#151B24,#0D121A)', borderRadius:'13px', overflow:'hidden',
+        border:'1px solid ' + (done ? 'rgba(62,216,160,.36)' : (run_ ? 'var(--brand)' : idleBorder)),
+        boxShadow: (done||run_)
+          ? '0 16px 44px -18px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.06)'
+          : '0 13px 36px -20px rgba(0,0,0,.78), inset 0 1px 0 rgba(255,255,255,.045)',
+        transition:'border-color .3s, box-shadow .3s' };
+      const hostDotStyle = { width:'7px', height:'7px', borderRadius:'50%', flex:'none', background: done?'var(--pass)':(run_?'var(--run)':accent), boxShadow: done?'0 0 7px rgba(62,216,160,.7)':(run_?'none':'0 0 6px '+idleBorder), transition:'all .3s' };
+      const flowTagStyle = { fontFamily:"'Geist Mono',monospace", fontSize:'9px', color:'#565F6D', letterSpacing:'.02em', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:'none' };
+      const runBtnStyle = { width:'22px', height:'22px', borderRadius:'7px', border:'1px solid rgba(255,255,255,.08)', background:'rgba(255,255,255,.03)', color:'#8A94A4', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'8px', flex:'none' };
+      const spinStyle = run_ ? { width:'12px', height:'12px', borderRadius:'50%', border:'1.5px solid rgba(124,140,255,.35)', borderTopColor:'var(--brand)', animation:'spin .7s linear infinite', flex:'none' } : { width:'0', height:'0' };
+      const methodStyle = { fontFamily:"'Geist Mono',monospace", fontSize:'11px', fontWeight:700, letterSpacing:'.05em', padding:'4px 8px', borderRadius:'6px', background:mc+'22', color:mc, flex:'none', boxShadow:'inset 0 0 0 1px '+mc+'33' };
+      const bodyTabStyle = { color:'#8A94A4' };
+      const respHeadStyle = { display:'flex', alignItems:'center', gap:'8px', padding:'8px 13px 6px', borderTop:'1px solid rgba(255,255,255,.05)', opacity: done?1:0.5, transition:'opacity .3s' };
+      let statusText='—', statusStyle={ fontFamily:"'Geist Mono',monospace", fontSize:'11px', fontWeight:700, color:'#4A525E' }, statusWord='', statusWordColor='#5B6472';
+      if(run_){ statusText='···'; statusStyle={ ...statusStyle, color:'var(--run)' }; statusWord='running'; statusWordColor='var(--run)'; }
+      if(done){ const ok = d.code[0]==='2'; statusText=d.code; statusStyle={ fontFamily:"'Geist Mono',monospace", fontSize:'11px', fontWeight:700, padding:'1px 6px', borderRadius:'4px', background:'rgba(62,216,160,.14)', color:'var(--pass)' }; statusWord=d.word; statusWordColor='#7A8494'; }
+      const metaText = done ? d.meta : '';
+      let bodyText = '— awaiting run —'; if(run_) bodyText='streaming…'; if(done) bodyText=d.body;
+      const bodyStyle = { margin:'0', padding:'6px 12px 12px', fontFamily:"'Geist Mono',monospace", fontSize:'11px', lineHeight:'1.55', color: done?'#AEB8C4':'#4A525E', whiteSpace:'pre', overflow:'hidden', maxHeight: done?'120px':'26px', transition:'max-height .3s' };
+      const authLabel = d.auth==='inherited' ? 'auth ✓' : (d.auth==='creds' ? 'auth · creds' : 'auth');
+      const authStyle = { color: d.auth==='inherited' ? 'var(--pass)' : '#5B6472' };
+      const showSecret = d.id==='login' && done;
+      const secretChipStyle = showSecret
+        ? { padding:'1px 6px', borderRadius:'4px', background:'rgba(245,184,64,.12)', border:'1px solid rgba(245,184,64,.28)', color:'var(--run)', fontFamily:"'Geist Mono',monospace", fontSize:'9px', letterSpacing:'.06em' }
+        : { display:'none' };
+      return { ...d, cardStyle, hostDotStyle, flowTagStyle, runBtnStyle, spinStyle, methodStyle, bodyTabStyle, respHeadStyle, statusText, statusStyle, statusWord, statusWordColor, metaText, bodyText, bodyStyle, authLabel, authStyle, secretChipStyle };
+    });
+
+    const assertDefs = [
+      { id:'aLogin', parent:'login', node:L.aLogin, rows:[{field:'status',op:'=',val:'200'},{field:'data.access_token',op:'exists',val:''}] },
+      { id:'aCreate', parent:'create', node:L.aCreate, rows:[{field:'status',op:'=',val:'201'},{field:'data.id',op:'exists',val:''}] },
+      { id:'aRead', parent:'read', node:L.aRead, rows:[{field:'status',op:'=',val:'200'}] },
+      { id:'aUpdate', parent:'update', node:L.aUpdate, rows:[{field:'status',op:'=',val:'200'},{field:'data.title',op:'contains',val:'updated'}] },
+      { id:'aDelete', parent:'delete', node:L.aDelete, rows:[{field:'status',op:'=',val:'200'}] },
+    ];
+    const asserts = assertDefs.map(a => {
+      const done = ns[a.parent]==='done';
+      const cardStyle = { position:'absolute', left:a.node.x+'px', top:a.node.y+'px', width:a.node.w+'px', background:'linear-gradient(180deg,#141922,#0D121A)', borderRadius:'13px', overflow:'hidden',
+        border:'1px solid ' + (done ? 'rgba(62,216,160,.32)' : 'rgba(255,255,255,.08)'),
+        boxShadow: (done?'0 12px 34px -18px rgba(0,0,0,.8)':'0 10px 28px -18px rgba(0,0,0,.72)')+', inset 0 1px 0 rgba(255,255,255,.04)', transition:'all .3s' };
+      const iconStyle = { fontSize:'11px', color: done?'var(--pass)':'#6B7482', transition:'color .3s' };
+      const passText = done ? (a.rows.length+' passing') : (a.rows.length+' checks');
+      const passStyle = { marginLeft:'auto', fontFamily:"'Geist Mono',monospace", fontSize:'10px', color: done?'var(--pass)':'#5B6472', transition:'color .3s' };
+      const rows = a.rows.map(r => ({
+        field:r.field, op:r.op, val:r.val,
+        dotStyle:{ width:'6px', height:'6px', borderRadius:'3px', flex:'none', background: done?'var(--pass)':'#4A525E', boxShadow: done?'0 0 5px rgba(62,216,160,.7)':'none', transition:'all .3s' },
+        opStyle:{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'2px 7px', borderRadius:'6px', background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.08)', fontFamily:"'Geist Mono',monospace", fontSize:'10px', color:'#8A94A4', flex:'none' },
+        valStyle: r.val ? { padding:'2px 8px', borderRadius:'6px', background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.08)', fontFamily:"'Geist Mono',monospace", fontSize:'10.5px', color:'#C6CED9', minWidth:'32px' } : { display:'none' },
+      }));
+      return { cardStyle, iconStyle, passText, passStyle, rows };
+    });
+
+    // wires
+    const oc = { x:L.origin.x+L.origin.w, y:L.origin.y+90 };
+    const hc = (n)=>n.y+26;
+    const wd = [
+      { id:'o-login', d:this.hbez(oc.x,oc.y,L.login.x,hc(L.login)), to:'login' },
+      { id:'login-create', d:this.hbez(L.login.x+L.login.w,hc(L.login),L.create.x,hc(L.create)), to:'create', bind:true },
+      { id:'create-read', d:this.hbez(L.create.x+L.create.w,hc(L.create),L.read.x,hc(L.read)), to:'read', bind:true },
+      { id:'read-update', d:this.vbez(L.read.x+L.read.w/2,L.read.y+200,L.update.x+L.update.w/2,L.update.y), to:'update', bind:true },
+      { id:'update-delete', d:this.hbez(L.update.x,hc(L.update),L.delete.x+L.delete.w,hc(L.delete)), to:'delete', bind:true },
+      { id:'login-aL', d:this.vbez(L.login.x+40,L.login.y+150,L.aLogin.x+24,L.aLogin.y), to:'login', dim:true },
+      { id:'create-aC', d:this.vbez(L.create.x+40,L.create.y+150,L.aCreate.x+24,L.aCreate.y), to:'create', dim:true },
+      { id:'read-aR', d:this.vbez(L.read.x+40,L.read.y+150,L.aRead.x+24,L.aRead.y), to:'read', dim:true },
+      { id:'update-aU', d:this.vbez(L.update.x+40,L.update.y+150,L.aUpdate.x+24,L.aUpdate.y), to:'update', dim:true },
+      { id:'delete-aD', d:this.vbez(L.delete.x+40,L.delete.y+150,L.aDelete.x+24,L.aDelete.y), to:'delete', dim:true },
+    ];
+    const wires = wd.map(w => {
+      const carrying = !!carry[w.id], done = ns[w.to]==='done';
+      const baseStyle = { stroke: done ? 'rgba(62,216,160,.34)' : (carrying ? 'var(--brand)' : 'rgba(255,255,255,.11)'), strokeWidth: (done||carrying)?1.75:1.4, strokeDasharray: w.dim?'4 5':'none', transition:'stroke .3s' };
+      const flowStyle = carrying ? { stroke:'var(--brand)', strokeWidth:2.5, strokeDasharray:'2 9', strokeLinecap:'round', animation:'dashmove .55s linear infinite', filter:'drop-shadow(0 0 4px var(--brand))' } : { stroke:'transparent', strokeWidth:0 };
+      return { d:w.d, baseStyle, flowStyle };
+    });
+
+    const lblStyle = (id,x,y)=>({ position:'absolute', left:x+'px', top:(y-13)+'px', transform:'translateX(-50%)', padding:'3px 9px', borderRadius:'7px', background:'rgba(14,19,27,.95)', border:'1px solid ' + (carry[id]?'rgba(124,140,255,.45)':'rgba(255,255,255,.1)'), fontFamily:"'Geist Mono',monospace", fontSize:'10px', pointerEvents:'none', whiteSpace:'nowrap', boxShadow:'0 4px 12px -6px rgba(0,0,0,.7)', transition:'border-color .3s', zIndex:5 });
+    const mid = (a,b)=>(a+b)/2;
+    const wireLabels = [
+      { pre:'data.access_token → ', var:'{{token}}', style:lblStyle('login-create', mid(L.login.x+L.login.w,L.create.x), hc(L.login)) },
+      { pre:'data.id → ', var:'{{todoId}}', style:lblStyle('create-read', mid(L.create.x+L.create.w,L.read.x), hc(L.create)) },
+      { pre:'', var:'{{todoId}}', style:lblStyle('read-update', L.read.x+L.read.w/2, mid(L.read.y+200,L.update.y)) },
+      { pre:'', var:'{{todoId}}', style:lblStyle('update-delete', mid(L.update.x,L.delete.x+L.delete.w), hc(L.update)) },
+    ];
+
+    // origin footer verdict
+    const oDone = verdict==='pass';
+    const origin = {
+      cardStyle:{ position:'absolute', left:L.origin.x+'px', top:L.origin.y+'px', width:L.origin.w+'px', background:'linear-gradient(180deg,#12171F,#0E131B)', borderRadius:'13px', overflow:'hidden',
+        border:'1px solid ' + (ns.origin!=='idle' ? 'rgba(124,140,255,.4)' : 'rgba(255,255,255,.1)'),
+        boxShadow: '0 14px 42px -18px rgba(0,0,0,.85)', transition:'all .3s' },
+      footStyle:{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 13px', borderTop:'1px solid rgba(255,255,255,.06)', background: oDone?'rgba(62,216,160,.07)':'rgba(255,255,255,.02)', fontFamily:"'Geist Mono',monospace", fontSize:'11px', color: oDone?'var(--pass)':'#7A8494', transition:'all .3s' },
+      footDot:{ width:'7px', height:'7px', borderRadius:'4px', background: oDone?'var(--pass)':'#5B6472', animation: verdict==='running'?'softPulse 1s ease-in-out infinite':'none' },
+      footText: verdict==='pass' ? '5 passed · 8 checks ✓' : (verdict==='running' ? 'running…' : 'not run'),
+    };
+
+    // run button
+    const runLabel = running ? 'Running…' : (isAgent ? 'Re-run' : 'Run flow');
+    const runIcon = running ? '' : '▶';
+    const runIconStyle = running ? { width:'11px', height:'11px', borderRadius:'50%', border:'2px solid rgba(10,12,16,.35)', borderTopColor:'#0A0C10', animation:'spin .7s linear infinite' } : { fontSize:'8px' };
+    const runBtnStyle = { display:'flex', alignItems:'center', gap:'8px', padding:'8px 15px', borderRadius:'9px', border:'none', cursor:'pointer', fontFamily:"'Geist',sans-serif", fontSize:'13px', fontWeight:600, color:'#0A0C10',
+      background: running ? 'linear-gradient(135deg,#F5B840,#E8A62E)' : 'linear-gradient(135deg,var(--brand2),var(--brand))', boxShadow:'0 4px 16px -5px rgba(124,140,255,.55)', transition:'all .2s' };
+
+    // status bar verdict
+    let barVerdict='not run', bc='#5B6472', dotAnim='none';
+    if(verdict==='running'){ barVerdict='running…'; bc='var(--run)'; dotAnim='softPulse 1s ease-in-out infinite'; }
+    if(verdict==='pass'){ barVerdict='5 passed · 8 checks ✓'; bc='var(--pass)'; }
+    const barVerdictStyle = { color:bc, fontWeight:600, transition:'color .3s' };
+    const barDotStyle = { width:'7px', height:'7px', borderRadius:'4px', background:bc, animation:dotAnim, transition:'background .3s' };
+
+    // ── tour ──
+    const ts = this.state.tourStep, spot = this.state.spot;
+    const tourActive = ts >= 0 && !!spot;
+    const step = ts >= 0 ? this.tourSteps[ts] : null;
+    const isLastTour = ts === this.tourSteps.length - 1;
+    let spotStyle = { display:'none' }, tipStyle = { display:'none' };
+    if(tourActive){
+      spotStyle = { position:'fixed', left:spot.x+'px', top:spot.y+'px', width:spot.w+'px', height:spot.h+'px', borderRadius:'12px',
+        boxShadow:'0 0 0 9999px rgba(6,8,12,.76)', border:'1.5px solid var(--brand)', zIndex:49, pointerEvents:'none', transition:'all .28s cubic-bezier(.4,0,.2,1)' };
+      const w = 312, left = Math.max(14, Math.min((typeof window!=='undefined'?window.innerWidth:1440) - w - 14, spot.cx - w/2));
+      tipStyle = { position:'fixed', left:left+'px', width:w+'px', zIndex:51, background:'#0E131B', border:'1px solid rgba(255,255,255,.12)', borderRadius:'14px', padding:'16px 17px 14px', boxShadow:'0 24px 60px -20px rgba(0,0,0,.85)' };
+      if(spot.place === 'below') tipStyle.top = (spot.y + spot.h + 14) + 'px';
+      else tipStyle.bottom = ((typeof window!=='undefined'?window.innerHeight:900) - spot.y + 14) + 'px';
+    }
+    const tourDots = this.tourSteps.map((_, i) => ({ style:{ width: i===ts?'18px':'6px', height:'6px', borderRadius:'3px', background: i===ts?'var(--brand)':'rgba(255,255,255,.16)', transition:'all .2s' } }));
+
+    const eff = Math.max(0.3, Math.min(1.8, this.state.fit * this.state.zoom));
+    const boardScaleStyle = { position:'relative', width:'1660px', height:'1200px', flex:'none', transform:'scale('+eff+')', transformOrigin:'top center' };
+    const zoomBtn = { width:'22px', height:'20px', borderRadius:'5px', border:'1px solid rgba(255,255,255,.09)', background:'rgba(255,255,255,.03)', color:'#8A94A4', cursor:'pointer', fontSize:'12px', display:'flex', alignItems:'center', justifyContent:'center' };
+
+    return {
+      rootRef:this.rootRef, boardRef:this.boardRef, boardScaleStyle,
+      baseVar:'{{base}}', tokenVar:'{{token}}', todoVar:'{{todoId}}',
+      clusterStyle:{ position:'absolute', top:'14px', right:(specOpen?392:16)+'px', zIndex:27, display:'flex', alignItems:'center', gap:'10px', transition:'right .22s ease' },
+      isFlow: view==='flow', isOnboard: view==='onboarding', isAgent, specOpen,
+      showFlow:this.showFlow, showOnboard:this.showOnboard, toggleSpec:this.toggleSpec,
+      driveYou:this.driveYou, driveAgent:this.driveAgent, driveAgentFromOnboard:this.driveAgentFromOnboard, run:this.run,
+      youStyle:this.seg(!isAgent), agentStyle:this.seg(isAgent),
+      railNew:this.rail(view==='onboarding'), railIcon:this.rail(false), railSpec:this.rail(specOpen),
+      railHover:{ background:'rgba(255,255,255,.06)', color:'#C6CED9' },
+      startTour:this.startTour, tourBegin:this.tourBegin, tourNext:this.tourNext, tourBack:this.tourBack, tourSkip:this.tourSkip,
+      tourWelcome:this.state.tourWelcome, tourActive, spotStyle, tipStyle, tourDots,
+      tourTitle: step?step.title:'', tourBody: step?step.body:'', tourIndex: ts+1, tourTotal:this.tourSteps.length,
+      isFirstTour: ts===0, isLastTour, tourNextLabel: isLastTour?'Run it ▶':'Next',
+      tourBackStyle:{ padding:'7px 12px', borderRadius:'8px', border:'1px solid rgba(255,255,255,.12)', background:'transparent', cursor: ts===0?'default':'pointer', fontFamily:"'Geist',sans-serif", fontSize:'12.5px', fontWeight:500, color: ts===0?'#3B434F':'#98A2B0' },
+      railBarNew:this.railBar(view==='onboarding'), railBarSpec:this.railBar(specOpen),
+      runLabel, runIcon, runIconStyle, runBtnStyle,
+      origin, requests, asserts, wires, wireLabels,
+      barVerdict, barVerdictStyle, barDotStyle,
+      zoomIn:this.zoomIn, zoomOut:this.zoomOut, zoomFit:this.zoomFit, zoomBtn, zoomPct: Math.round(eff*100),
+      tabSpec:panelTab==='spec', tabHttp:panelTab==='http', tabFiles:panelTab==='files', tabMcp:panelTab==='mcp',
+      tabSpecFn:()=>this.setTab('spec'), tabHttpFn:()=>this.setTab('http'), tabFilesFn:()=>this.setTab('files'), tabMcpFn:()=>this.setTab('mcp'),
+      tabSpecStyle:this.tab(panelTab==='spec'), tabHttpStyle:this.tab(panelTab==='http'), tabFilesStyle:this.tab(panelTab==='files'), tabMcpStyle:this.tab(panelTab==='mcp'),
+      obCardA:this.ob(), obCardB:this.ob(), obCardC:this.ob(),
+    };
+  }
+}
+</script>
+</body>
+</html>

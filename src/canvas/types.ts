@@ -41,7 +41,9 @@ export interface RequestNodeData extends Record<string, unknown> {
  *  also carries the environment its whole tree runs under, plus default
  *  headers/auth every request in the tree inherits. */
 export interface CollectionNodeData extends Record<string, unknown> {
-  collectionId: string;
+  /** The collection/flow name. The origin owns its own identity — there is
+   *  no separate collections store. */
+  name: string;
   /** Environment for the tree; null/undefined = the active environment. */
   environmentId?: string | null;
   /** Headers inherited by every request in the tree. A request's own

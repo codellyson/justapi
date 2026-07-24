@@ -1,16 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import { useReactFlow } from "@xyflow/react";
 import {
   Plus,
   Import,
   Bookmark,
+  Boxes,
   Layers,
-  Check,
-  Pencil,
-  Trash2,
-  Eraser,
+  CodeXml,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useCanvasStore } from "../use-canvas-store";
@@ -19,30 +17,41 @@ interface RailProps {
   libraryOpen: boolean;
   onToggleLibrary: () => void;
   onOpenImport: () => void;
+  specOpen: boolean;
+  onToggleSpec: () => void;
+  canvasesOpen: boolean;
+  onToggleCanvases: () => void;
+  snippetsOpen: boolean;
+  onToggleSnippets: () => void;
+  themeOpen: boolean;
+  onToggleTheme: () => void;
+  onStartTour: () => void;
 }
 
 const railBtn =
   "relative flex items-center justify-center w-8 h-8 rounded-md text-secondary hover:text-primary hover:bg-bg/70 transition-colors";
 
 /**
- * The instrument rail: brand mark up top, node actions below it, the
- * library toggle, and the canvas switcher at the bottom. Everything the
- * old floating toolbar did, docked.
+ * The instrument rail: brand mark up top, node actions below it, and the
+ * panels + settings docked at the bottom. Panels (collections, canvases)
+ * open as docked side panes, not floating popovers, so they scale.
  */
-export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) => {
+export const Rail = ({
+  libraryOpen,
+  onToggleLibrary,
+  onOpenImport,
+  specOpen,
+  onToggleSpec,
+  canvasesOpen,
+  onToggleCanvases,
+  snippetsOpen,
+  onToggleSnippets,
+  themeOpen,
+  onToggleTheme,
+  onStartTour,
+}: RailProps) => {
   const { screenToFlowPosition } = useReactFlow();
   const addRequestNode = useCanvasStore((s) => s.addRequestNode);
-  const graphs = useCanvasStore((s) => s.graphs);
-  const activeGraphId = useCanvasStore((s) => s.activeGraphId);
-  const setActiveGraph = useCanvasStore((s) => s.setActiveGraph);
-  const createGraph = useCanvasStore((s) => s.createGraph);
-  const renameGraph = useCanvasStore((s) => s.renameGraph);
-  const deleteGraph = useCanvasStore((s) => s.deleteGraph);
-  const clearGraph = useCanvasStore((s) => s.clearGraph);
-
-  const [graphsOpen, setGraphsOpen] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
-  const active = graphs[activeGraphId];
 
   const centerPosition = () =>
     screenToFlowPosition({
@@ -51,10 +60,10 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
     });
 
   return (
-    <div className="absolute left-0 top-0 bottom-7 z-30 flex w-12 flex-col items-center gap-1 border-r border-border/50 bg-bg-secondary/85 backdrop-blur-sm py-2.5">
+    <div className="z-30 flex w-12 flex-none flex-col items-center gap-1 border-r border-border/50 bg-bg-secondary py-2.5">
       {/* brand mark */}
       <div
-        className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-md border border-border/60 bg-bg font-mono text-[13px] font-bold text-accent select-none"
+        className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-mono text-[13px] font-bold text-accent-text shadow-sm select-none"
         title="JustAPI"
       >
         {"{}"}
@@ -83,122 +92,53 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
         type="button"
         onClick={onToggleLibrary}
         className={cn(railBtn, libraryOpen && "text-accent bg-accent/10")}
-        title="Collections"
+        title="Collections — flows on this canvas"
+      >
+        <Boxes className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggleCanvases}
+        className={cn(railBtn, canvasesOpen && "text-accent bg-accent/10")}
+        title="Canvases"
+      >
+        <Layers className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggleSnippets}
+        className={cn(railBtn, snippetsOpen && "text-accent bg-accent/10")}
+        title="Snippets — reusable saved requests"
       >
         <Bookmark className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggleSpec}
+        className={cn(railBtn, specOpen && "text-accent bg-accent/10")}
+        title="Flow spec — this board as the document agents read & write"
+      >
+        <CodeXml className="h-4 w-4" />
       </button>
 
       <div className="flex-1" />
 
-      {/* canvas switcher */}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => {
-            setGraphsOpen((o) => !o);
-            setConfirmClear(false);
-          }}
-          className={cn(railBtn, graphsOpen && "text-primary bg-bg/70")}
-          title={`Canvas: ${active?.name ?? ""}`}
-        >
-          <Layers className="h-4 w-4" />
-        </button>
-        {graphsOpen && (
-          <div className="absolute bottom-0 left-full ml-2 w-72 rounded-xl border border-border/60 bg-bg-secondary/95 py-1.5 font-sans text-[13px] shadow-[0_12px_28px_-12px_rgba(0,0,0,0.5)] backdrop-blur-sm">
-            <div className="px-3.5 pb-1.5 pt-1 text-[12px] text-muted">
-              canvases
-            </div>
-            {Object.values(graphs)
-              .sort((a, b) => a.createdAt - b.createdAt)
-              .map((g) => (
-                <div
-                  key={g.id}
-                  className={cn(
-                    "group flex cursor-pointer items-center gap-2 px-3.5 py-2 hover:bg-bg/60",
-                    g.id === activeGraphId ? "text-accent" : "text-secondary"
-                  )}
-                  onClick={() => {
-                    setActiveGraph(g.id);
-                    setGraphsOpen(false);
-                  }}
-                >
-                  {g.id === activeGraphId ? (
-                    <Check className="h-4 w-4 shrink-0" />
-                  ) : (
-                    <span className="w-4 shrink-0" />
-                  )}
-                  <span className="flex-1 truncate">{g.name}</span>
-                  <span
-                    className="text-[13px] text-muted"
-                    title={`${g.nodes.length} node${g.nodes.length === 1 ? "" : "s"}`}
-                  >
-                    {g.nodes.length}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const name = window.prompt("Rename canvas", g.name);
-                      if (name?.trim()) renameGraph(g.id, name.trim());
-                    }}
-                    className="hidden rounded p-1 text-muted hover:text-primary group-hover:block"
-                    title="Rename"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Delete canvas "${g.name}"?`)) {
-                        deleteGraph(g.id);
-                      }
-                    }}
-                    className="hidden rounded p-1 text-muted hover:text-danger group-hover:block"
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-            <button
-              type="button"
-              onClick={() => {
-                createGraph();
-                setGraphsOpen(false);
-              }}
-              className="mt-1 flex w-full items-center gap-2 border-t border-border/40 px-3.5 py-2 text-secondary hover:text-primary hover:bg-bg/60"
-            >
-              <Plus className="h-4 w-4" />
-              new canvas
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const count = active?.nodes.length ?? 0;
-                if (count > 0 && !confirmClear) {
-                  setConfirmClear(true);
-                  return;
-                }
-                clearGraph();
-                setConfirmClear(false);
-                setGraphsOpen(false);
-              }}
-              className={cn(
-                "flex w-full items-center gap-2 px-3.5 py-2 transition-colors",
-                confirmClear
-                  ? "bg-danger/10 text-danger"
-                  : "text-secondary hover:text-danger hover:bg-danger/10"
-              )}
-            >
-              <Eraser className="h-4 w-4" />
-              {confirmClear
-                ? `really clear ${active?.nodes.length ?? 0} nodes?`
-                : "clear board"}
-            </button>
-          </div>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={onStartTour}
+        className={railBtn}
+        title="Take the tour"
+      >
+        <HelpCircle className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onToggleTheme}
+        className={cn(railBtn, themeOpen && "text-accent bg-accent/10")}
+        title="Appearance"
+      >
+        <span className="text-[15px] leading-none">◑</span>
+      </button>
     </div>
   );
 };

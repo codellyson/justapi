@@ -28,9 +28,9 @@ export const gridPositions = (
 /* Fallback footprints per node type — used when React Flow hasn't
    measured the node yet (it stamps `measured` after first render). */
 const FOOTPRINT: Record<string, { w: number; h: number }> = {
-  request: { w: 360, h: 130 },
-  collection: { w: 230, h: 120 },
-  assert: { w: 280, h: 150 },
+  request: { w: 400, h: 145 },
+  collection: { w: 264, h: 135 },
+  assert: { w: 320, h: 165 },
 };
 
 const MARGIN = 28;

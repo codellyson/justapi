@@ -147,7 +147,7 @@ export const BindingEdgeView = memo((props: EdgeProps<BindingEdgeType>) => {
             type="button"
             onClick={() => setInspectedEdge(inspected ? null : id)}
             className={cn(
-              "px-1.5 py-0.5 rounded-md border font-mono text-[10px] backdrop-blur-sm transition-colors max-w-[220px] truncate block",
+              "px-1.5 py-0.5 rounded-md border font-mono text-[12px] backdrop-blur-sm transition-colors max-w-[220px] truncate block",
               inspected || selected
                 ? "border-accent/70 bg-accent/10 text-accent"
                 : binding?.targetName

@@ -150,7 +150,7 @@ const CanvasInner = () => {
         onMoveEnd={(_e, viewport) => setViewport(viewport)}
         defaultViewport={graph.viewport ?? undefined}
         fitView={!graph.viewport}
-        fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
+        fitViewOptions={{ padding: 0.25, maxZoom: 1, minZoom: 0.65 }}
         deleteKeyCode={["Backspace", "Delete"]}
         minZoom={0.15}
         maxZoom={2}

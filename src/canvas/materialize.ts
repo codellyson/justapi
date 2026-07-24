@@ -16,8 +16,8 @@ import type {
 const uid = (): string =>
   `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
-const X_GAP = 440;
-const Y_GAP = 190;
+const X_GAP = 560;
+const Y_GAP = 210;
 
 const authToSnapshot = (
   req: FlowRequest

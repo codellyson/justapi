@@ -41,9 +41,13 @@ export const StatusBar = () => {
   const { zoom } = useViewport();
   const tidyGraph = useCanvasStore((s) => s.tidyGraph);
 
+  // Fit never drops below readable zoom — big trees are panned, not
+  // shrunk into eye strain.
+  const FIT = { padding: 0.2, minZoom: 0.65, maxZoom: 1 };
+
   const tidy = () => {
     tidyGraph();
-    void fitView({ padding: 0.2, duration: 350 });
+    void fitView({ ...FIT, duration: 350 });
   };
 
   const latest = useMemo(() => {
@@ -68,7 +72,7 @@ export const StatusBar = () => {
   const bindingCount = graph.edges.filter((e) => e.data).length;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-30 flex h-7 items-center gap-3 border-t border-border/50 bg-bg-secondary/90 px-3 font-mono text-[10px] text-muted backdrop-blur-sm">
+    <div className="absolute bottom-0 left-0 right-0 z-30 flex h-7 items-center gap-3 border-t border-border/50 bg-bg-secondary/90 px-3 font-mono text-[12px] text-muted backdrop-blur-sm">
       <span className="tracking-[0.08em] text-secondary">JUSTAPI/1.1</span>
 
       {latest.pending ? (
@@ -135,7 +139,7 @@ export const StatusBar = () => {
         </button>
         <button
           type="button"
-          onClick={() => void fitView({ padding: 0.2, duration: 300 })}
+          onClick={() => void fitView({ ...FIT, duration: 300 })}
           className="ml-0.5 rounded p-1 text-secondary hover:text-primary hover:bg-bg/60"
           title="Fit view"
         >

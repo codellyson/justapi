@@ -26,7 +26,7 @@ import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
 import { useRunStore, idleRun } from "../use-run-store";
 import { runFlow } from "../engine";
 
-const BRANCH_X_GAP = 420;
+const BRANCH_X_GAP = 480;
 const BRANCH_Y_GAP = 150;
 
 /**
@@ -122,7 +122,7 @@ export const CollectionNodeCard = memo(
     };
 
     return (
-      <div className="group w-[230px] rounded-2xl border border-border/40 bg-bg-secondary/95 font-sans text-[11px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color] hover:border-border/70">
+      <div className="group w-[264px] rounded-2xl border border-border/40 bg-bg-secondary/95 font-sans text-[13px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color] hover:border-border/70">
         <Handle
           type="source"
           position={Position.Right}
@@ -133,11 +133,11 @@ export const CollectionNodeCard = memo(
         {/* eyebrow */}
         <div className="flex items-center gap-1.5 rounded-t-[15px] bg-accent/[0.06] px-3 py-1.5">
           <Bookmark className="h-3 w-3 shrink-0 text-accent" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-accent">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-accent">
             origin
           </span>
           <select
-            className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[10px] uppercase tracking-[0.12em] text-secondary outline-none"
+            className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[12px] uppercase tracking-[0.12em] text-secondary outline-none"
             value={collectionId}
             onChange={(e) =>
               updateNodeData(id, { collectionId: e.target.value })
@@ -167,7 +167,7 @@ export const CollectionNodeCard = memo(
           <button
             type="button"
             onClick={() => removeNode(id)}
-            className="nodrag rounded p-0.5 text-muted/60 opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+            className="nodrag rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
             title="Remove from canvas (collection is kept)"
           >
             <Trash2 className="h-3 w-3" />
@@ -189,12 +189,12 @@ export const CollectionNodeCard = memo(
                 <ChevronRight className="h-3 w-3" />
               )}
               <Globe className="h-3 w-3 text-success" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+              <span className="text-[11px] font-medium">
                 env
               </span>
             </button>
             <select
-              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[10px] text-secondary outline-none"
+              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[12px] text-secondary outline-none"
               value={environmentId ?? ""}
               onChange={(e) =>
                 updateNodeData(id, { environmentId: e.target.value || null })
@@ -216,13 +216,13 @@ export const CollectionNodeCard = memo(
               {Object.entries(env.variables).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-1">
                   <span
-                    className="max-w-[70px] shrink-0 truncate font-mono text-[10px] text-secondary"
+                    className="max-w-[70px] shrink-0 truncate font-mono text-[12px] text-secondary"
                     title={k}
                   >
                     {k}
                   </span>
                   <input
-                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60"
+                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60"
                     defaultValue={v}
                     onBlur={(e) => setVar(k, e.target.value)}
                     spellCheck={false}
@@ -230,7 +230,7 @@ export const CollectionNodeCard = memo(
                   <button
                     type="button"
                     onClick={() => removeVar(k)}
-                    className="nodrag p-0.5 text-muted/50 hover:text-danger"
+                    className="nodrag p-0.5 text-muted hover:text-danger"
                     title={`Remove ${k}`}
                   >
                     <X className="h-2.5 w-2.5" />
@@ -239,7 +239,7 @@ export const CollectionNodeCard = memo(
               ))}
               <div className="flex items-center gap-1">
                 <input
-                  className="nodrag min-w-0 flex-1 rounded border border-dashed border-border/40 bg-transparent px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                  className="nodrag min-w-0 flex-1 rounded border border-dashed border-border/40 bg-transparent px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                   placeholder="new variable"
                   value={newVar}
                   onChange={(e) => setNewVar(e.target.value)}
@@ -279,12 +279,12 @@ export const CollectionNodeCard = memo(
                 <ChevronRight className="h-3 w-3" />
               )}
               <KeyRound className="h-3 w-3 text-warning" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+              <span className="text-[11px] font-medium">
                 auth
               </span>
             </button>
             <select
-              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[10px] text-secondary outline-none"
+              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[12px] text-secondary outline-none"
               value={auth}
               onChange={(e) =>
                 updateNodeData(id, { authType: e.target.value as AuthType })
@@ -300,7 +300,7 @@ export const CollectionNodeCard = memo(
             <div className="space-y-1 px-3 pb-2">
               {auth === "bearer" && (
                 <input
-                  className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                  className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                   placeholder="token or {{token}}"
                   defaultValue={authCfg.bearerToken ?? ""}
                   onBlur={(e) => setAuthField("bearerToken", e.target.value)}
@@ -310,14 +310,14 @@ export const CollectionNodeCard = memo(
               {auth === "basic" && (
                 <>
                   <input
-                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                     placeholder="username"
                     defaultValue={authCfg.username ?? ""}
                     onBlur={(e) => setAuthField("username", e.target.value)}
                     spellCheck={false}
                   />
                   <input
-                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                     placeholder="password or {{password}}"
                     defaultValue={authCfg.password ?? ""}
                     onBlur={(e) => setAuthField("password", e.target.value)}
@@ -328,14 +328,14 @@ export const CollectionNodeCard = memo(
               {auth === "api-key" && (
                 <>
                   <input
-                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                     placeholder="header (X-Api-Key)"
                     defaultValue={authCfg.apiKeyHeader ?? ""}
                     onBlur={(e) => setAuthField("apiKeyHeader", e.target.value)}
                     spellCheck={false}
                   />
                   <input
-                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                    className="nodrag w-full rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                     placeholder="key or {{apiKey}}"
                     defaultValue={authCfg.apiKey ?? ""}
                     onBlur={(e) => setAuthField("apiKey", e.target.value)}
@@ -362,12 +362,12 @@ export const CollectionNodeCard = memo(
                 <ChevronRight className="h-3 w-3" />
               )}
               <List className="h-3 w-3 text-accent" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.14em]">
+              <span className="text-[11px] font-medium">
                 headers
               </span>
               <div className="flex-1" />
               {headerCount > 0 && (
-                <span className="text-[10px] text-secondary">
+                <span className="text-[12px] text-secondary">
                   {headerCount}
                 </span>
               )}
@@ -378,13 +378,13 @@ export const CollectionNodeCard = memo(
               {Object.entries(defaultHeaders ?? {}).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-1">
                   <span
-                    className="max-w-[70px] shrink-0 truncate font-mono text-[10px] text-secondary"
+                    className="max-w-[70px] shrink-0 truncate font-mono text-[12px] text-secondary"
                     title={k}
                   >
                     {k}
                   </span>
                   <input
-                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60"
+                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60"
                     defaultValue={v}
                     onBlur={(e) => setHeader(k, e.target.value)}
                     spellCheck={false}
@@ -392,7 +392,7 @@ export const CollectionNodeCard = memo(
                   <button
                     type="button"
                     onClick={() => removeHeader(k)}
-                    className="nodrag p-0.5 text-muted/50 hover:text-danger"
+                    className="nodrag p-0.5 text-muted hover:text-danger"
                     title={`Remove ${k}`}
                   >
                     <X className="h-2.5 w-2.5" />
@@ -401,7 +401,7 @@ export const CollectionNodeCard = memo(
               ))}
               <div className="flex items-center gap-1">
                 <input
-                  className="nodrag min-w-0 flex-1 rounded border border-dashed border-border/40 bg-transparent px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                  className="nodrag min-w-0 flex-1 rounded border border-dashed border-border/40 bg-transparent px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                   placeholder="new header"
                   value={newHeader}
                   onChange={(e) => setNewHeader(e.target.value)}
@@ -434,7 +434,7 @@ export const CollectionNodeCard = memo(
           onClick={addRequest}
           className={cn(
             "nodrag flex w-full items-center justify-center gap-1.5 px-3 py-2",
-            "text-[10px] font-medium text-accent transition-colors hover:bg-accent/10",
+            "text-[12px] font-medium text-accent transition-colors hover:bg-accent/10",
             run.status === "idle" && "rounded-b-[15px]"
           )}
           title="Add a request to this flow — it branches from the origin"
@@ -445,14 +445,14 @@ export const CollectionNodeCard = memo(
 
         {/* flow verdict */}
         {running && (
-          <div className="rounded-b-[15px] border-t border-border/40 px-3 py-1.5 text-[10px] text-accent">
+          <div className="rounded-b-[15px] border-t border-border/40 px-3 py-1.5 text-[12px] text-accent">
             <span className="animate-pulse">running flow…</span>
           </div>
         )}
         {!running && run.error && (
           <div
             className={cn(
-              "rounded-b-[15px] border-t border-border/40 px-3 py-1.5 text-[10px] font-medium",
+              "rounded-b-[15px] border-t border-border/40 px-3 py-1.5 text-[12px] font-medium",
               run.status === "error"
                 ? "bg-danger/[0.07] text-danger"
                 : "bg-success/[0.07] text-success"

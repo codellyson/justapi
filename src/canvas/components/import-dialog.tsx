@@ -152,7 +152,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
-          <span className="text-[10px] uppercase tracking-wide text-muted">
+          <span className="text-[12px] text-muted">
             import — curl · fetch · HAR · OpenAPI json
           </span>
           <button
@@ -165,7 +165,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
         </div>
 
         <textarea
-          className="m-3 h-36 shrink-0 resize-none font-mono rounded-md border border-border/50 bg-bg px-2.5 py-2 text-[11px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+          className="m-3 h-36 shrink-0 resize-none font-mono rounded-md border border-border/50 bg-bg px-2.5 py-2 text-[13px] outline-none focus:border-accent/60 placeholder:text-muted/70"
           placeholder={`curl -H 'Authorization: Bearer {{token}}' https://api.example.com/users\n\npaste one or many — blocks are split automatically`}
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
@@ -196,11 +196,11 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
                       : "border-border/50 hover:border-accent/50"
                   )}
                 >
-                  <MethodPill method={c.snapshot.method} className="text-[10px]" />
-                  <span className="flex-1 min-w-0 truncate font-mono text-[11px] text-primary">
+                  <MethodPill method={c.snapshot.method} className="text-[12px]" />
+                  <span className="flex-1 min-w-0 truncate font-mono text-[13px] text-primary">
                     {c.snapshot.urlRaw}
                   </span>
-                  <span className="shrink-0 text-[10px] text-muted truncate max-w-[120px]">
+                  <span className="shrink-0 text-[12px] text-muted truncate max-w-[120px]">
                     {c.name}
                   </span>
                 </button>
@@ -210,7 +210,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
         )}
 
         <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/40 mt-3">
-          <span className="text-[10px] text-muted">
+          <span className="text-[12px] text-muted">
             {raw.trim()
               ? `${selected.length} of ${candidates.length} selected`
               : ""}
@@ -220,7 +220,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
             onClick={fanOut}
             disabled={selected.length === 0}
             className={cn(
-              "px-3 py-1 rounded-md text-[11px] font-semibold transition-colors",
+              "px-3 py-1 rounded-md text-[13px] font-semibold transition-colors",
               selected.length > 0
                 ? "bg-accent text-accent-text hover:bg-accent-hover"
                 : "bg-bg text-muted cursor-not-allowed"

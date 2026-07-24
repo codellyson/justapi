@@ -97,7 +97,7 @@ const UrlText = ({ url }: { url: string }) => {
   return (
     <span className="truncate">
       {parts.origin && (
-        <span className="text-muted/80">
+        <span className="text-muted">
           {parts.origin.replace(/^https?:\/\//, "")}
         </span>
       )}
@@ -252,7 +252,7 @@ export const RequestNodeCard = memo(
       if (!self || !g) return;
       const outgoing = g.edges.filter((e) => e.source === id).length;
       addLinkedRequest(id, {
-        x: self.position.x + 420,
+        x: self.position.x + 480,
         y: self.position.y + outgoing * 150,
       });
     };
@@ -265,7 +265,7 @@ export const RequestNodeCard = memo(
       if (!self || !g) return;
       const outgoing = g.edges.filter((e) => e.source === id).length;
       addAssertNode(id, {
-        x: self.position.x + 420,
+        x: self.position.x + 480,
         y: self.position.y + outgoing * 150,
       });
     };
@@ -280,12 +280,12 @@ export const RequestNodeCard = memo(
         type="button"
         onClick={() => toggleSection(section)}
         className={cn(
-          "nodrag text-[10px] tracking-wide transition-colors",
+          "nodrag text-[12px] tracking-wide transition-colors",
           openSection === section
             ? "text-accent"
             : set
             ? "text-secondary hover:text-primary"
-            : "text-muted/60 hover:text-secondary"
+            : "text-muted hover:text-secondary"
         )}
       >
         {label}
@@ -295,7 +295,7 @@ export const RequestNodeCard = memo(
     return (
       <div
         className={cn(
-          "group relative w-[360px] overflow-visible rounded-2xl border bg-bg-secondary/95 font-sans shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color,box-shadow]",
+          "group relative w-[400px] overflow-visible rounded-2xl border bg-bg-secondary/95 font-sans shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color,box-shadow]",
           selected
             ? "border-accent/45"
             : "border-border/40 hover:border-border/70"
@@ -349,7 +349,7 @@ export const RequestNodeCard = memo(
             }}
           />
           <span
-            className="truncate text-[9px] font-semibold uppercase tracking-[0.16em]"
+            className="truncate text-[10px] font-semibold uppercase tracking-[0.16em]"
             style={{ color: hasHost ? accent.stripe : undefined }}
           >
             {hasHost ? host : eyebrowFallback}
@@ -357,7 +357,7 @@ export const RequestNodeCard = memo(
           <div className="flex-1" />
           {originName && (
             <span
-              className="flex max-w-[90px] shrink-0 items-center gap-1 rounded bg-accent/10 px-1 py-px text-[8px] font-semibold uppercase tracking-[0.1em] text-accent"
+              className="flex max-w-[90px] shrink-0 items-center gap-1 rounded bg-accent/10 px-1 py-px text-[10px] font-medium text-accent"
               title={`Part of the "${originName}" flow`}
             >
               <Bookmark className="h-2 w-2 shrink-0" />
@@ -365,7 +365,7 @@ export const RequestNodeCard = memo(
             </span>
           )}
           <input
-            className="nodrag w-28 bg-transparent text-right text-[9px] uppercase tracking-[0.12em] text-secondary/80 outline-none placeholder:text-muted/40"
+            className="nodrag w-28 bg-transparent text-right text-[11px] text-secondary outline-none placeholder:text-muted/70"
             placeholder="name"
             value={name}
             onChange={(e) => updateNodeData(id, { name: e.target.value })}
@@ -379,7 +379,7 @@ export const RequestNodeCard = memo(
             type="button"
             onClick={cycleMethod}
             className={cn(
-              "nodrag shrink-0 font-mono text-[12px] font-bold tracking-wide",
+              "nodrag shrink-0 font-mono text-[15px] font-bold tracking-wide",
               methodTextColor[snapshot.method]
             )}
             title="Click to cycle method"
@@ -389,7 +389,7 @@ export const RequestNodeCard = memo(
 
           {editingUrl ? (
             <input
-              className="nodrag min-w-0 flex-1 bg-transparent font-mono text-[12px] text-primary outline-none placeholder:text-muted/50"
+              className="nodrag min-w-0 flex-1 bg-transparent font-mono text-[15px] text-primary outline-none placeholder:text-muted/70"
               placeholder="https://api.example.com/{{path}}"
               value={snapshot.urlRaw}
               onChange={(e) =>
@@ -415,7 +415,7 @@ export const RequestNodeCard = memo(
             <button
               type="button"
               onClick={() => setEditingUrl(true)}
-              className="nodrag flex min-w-0 flex-1 items-center text-left font-mono text-[12px]"
+              className="nodrag flex min-w-0 flex-1 items-center text-left font-mono text-[15px]"
               title="Click to edit URL"
             >
               <UrlText url={snapshot.urlRaw} />
@@ -472,7 +472,7 @@ export const RequestNodeCard = memo(
                   ? "text-success"
                   : saveOpen
                   ? "text-accent"
-                  : "text-muted/70 hover:text-accent"
+                  : "text-muted hover:text-accent"
               )}
               title="Save to collection"
             >
@@ -485,14 +485,14 @@ export const RequestNodeCard = memo(
             <button
               type="button"
               onClick={() => removeNode(id)}
-              className="nodrag rounded p-0.5 text-muted/70 hover:text-danger"
+              className="nodrag rounded p-0.5 text-muted hover:text-danger"
               title="Delete node"
             >
               <Trash2 className="h-3 w-3" />
             </button>
             {saveOpen && (
               <div className="nodrag absolute right-0 top-full z-20 mt-1.5 w-44 rounded-lg border border-border/60 bg-bg-secondary/95 py-1 font-sans shadow-[0_12px_24px_-12px_rgba(0,0,0,0.5)] backdrop-blur-sm">
-                <div className="px-2 pb-1 pt-0.5 text-[9px] uppercase tracking-[0.14em] text-muted">
+                <div className="px-2 pb-1 pt-0.5 text-[11px] text-muted">
                   save to
                 </div>
                 {collections.map((c) => (
@@ -500,9 +500,9 @@ export const RequestNodeCard = memo(
                     key={c.id}
                     type="button"
                     onClick={() => saveTo(c.id)}
-                    className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] text-secondary hover:bg-bg/60 hover:text-primary"
+                    className="flex w-full items-center gap-1.5 px-2 py-1 text-left text-[13px] text-secondary hover:bg-bg/60 hover:text-primary"
                   >
-                    <Bookmark className="h-3 w-3 shrink-0 text-muted/60" />
+                    <Bookmark className="h-3 w-3 shrink-0 text-muted" />
                     <span className="truncate">{c.name}</span>
                   </button>
                 ))}
@@ -513,7 +513,7 @@ export const RequestNodeCard = memo(
                     if (cname?.trim()) saveTo(createCollection(cname.trim()));
                   }}
                   className={cn(
-                    "flex w-full items-center gap-1.5 px-2 py-1 text-left text-[11px] text-accent hover:bg-accent/10",
+                    "flex w-full items-center gap-1.5 px-2 py-1 text-left text-[13px] text-accent hover:bg-accent/10",
                     collections.length > 0 &&
                       "mt-1 border-t border-border/40 pt-1.5"
                   )}
@@ -529,7 +529,7 @@ export const RequestNodeCard = memo(
         {openSection === "headers" && (
           <div className="border-t border-border/40 px-3 py-2">
             <textarea
-              className="nodrag nowheel h-16 w-full resize-none font-mono rounded-md border border-border/50 bg-bg px-2 py-1.5 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+              className="nodrag nowheel h-16 w-full resize-none font-mono rounded-md border border-border/50 bg-bg px-2 py-1.5 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
               placeholder={"Content-Type: application/json\nX-Api-Key: {{key}}"}
               defaultValue={headersToText(snapshot.headers)}
               onBlur={(e) =>
@@ -548,10 +548,10 @@ export const RequestNodeCard = memo(
                   type="button"
                   onClick={() => updateSnapshot(id, { bodyType: t })}
                   className={cn(
-                    "nodrag text-[10px] tracking-wide",
+                    "nodrag text-[12px] tracking-wide",
                     snapshot.bodyType === t
                       ? "text-accent"
-                      : "text-muted/60 hover:text-secondary"
+                      : "text-muted hover:text-secondary"
                   )}
                 >
                   {t}
@@ -560,7 +560,7 @@ export const RequestNodeCard = memo(
             </div>
             {snapshot.bodyType !== "none" && (
               <textarea
-                className="nodrag nowheel h-24 w-full resize-none font-mono rounded-md border border-border/50 bg-bg px-2 py-1.5 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+                className="nodrag nowheel h-24 w-full resize-none font-mono rounded-md border border-border/50 bg-bg px-2 py-1.5 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
                 placeholder={
                   snapshot.bodyType === "json" ? '{ "id": "{{id}}" }' : "raw body"
                 }
@@ -581,10 +581,10 @@ export const RequestNodeCard = memo(
                     type="button"
                     onClick={() => updateSnapshot(id, { authType: t })}
                     className={cn(
-                      "nodrag text-[10px] tracking-wide",
+                      "nodrag text-[12px] tracking-wide",
                       snapshot.authType === t
                         ? "text-accent"
-                        : "text-muted/60 hover:text-secondary"
+                        : "text-muted hover:text-secondary"
                     )}
                   >
                     {t}
@@ -594,7 +594,7 @@ export const RequestNodeCard = memo(
             </div>
             {snapshot.authType === "bearer" && (
               <input
-                className="nodrag w-full font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+                className="nodrag w-full font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
                 placeholder="token or {{token}}"
                 defaultValue={snapshot.authConfig.bearerToken ?? ""}
                 onBlur={(e) =>
@@ -611,7 +611,7 @@ export const RequestNodeCard = memo(
             {snapshot.authType === "basic" && (
               <div className="flex gap-1.5">
                 <input
-                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
                   placeholder="username"
                   defaultValue={snapshot.authConfig.username ?? ""}
                   onBlur={(e) =>
@@ -625,7 +625,7 @@ export const RequestNodeCard = memo(
                   spellCheck={false}
                 />
                 <input
-                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
                   placeholder="password"
                   type="password"
                   defaultValue={snapshot.authConfig.password ?? ""}
@@ -643,7 +643,7 @@ export const RequestNodeCard = memo(
             {snapshot.authType === "api-key" && (
               <div className="flex gap-1.5">
                 <input
-                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
                   placeholder="X-Api-Key"
                   defaultValue={snapshot.authConfig.apiKeyHeader ?? ""}
                   onBlur={(e) =>
@@ -657,7 +657,7 @@ export const RequestNodeCard = memo(
                   spellCheck={false}
                 />
                 <input
-                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[11px] outline-none placeholder:text-muted/50 focus:border-accent/60"
+                  className="nodrag min-w-0 flex-1 font-mono rounded-md border border-border/50 bg-bg px-2 py-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-accent/60"
                   placeholder="key or {{key}}"
                   defaultValue={snapshot.authConfig.apiKey ?? ""}
                   onBlur={(e) =>
@@ -677,12 +677,12 @@ export const RequestNodeCard = memo(
 
         {/* run state */}
         {run.status === "pending" && (
-          <div className="border-t border-border/40 px-3 py-1.5 text-[10px] text-accent">
+          <div className="border-t border-border/40 px-3 py-1.5 text-[12px] text-accent">
             <span className="animate-pulse">sending…</span>
           </div>
         )}
         {run.status === "error" && !run.response && (
-          <div className="break-words border-t border-border/40 bg-danger/[0.06] px-3 py-1.5 text-[10px] text-danger">
+          <div className="break-words border-t border-border/40 bg-danger/[0.06] px-3 py-1.5 text-[12px] text-danger">
             {run.error}
           </div>
         )}
@@ -692,7 +692,7 @@ export const RequestNodeCard = memo(
               type="button"
               onClick={() => updateNodeData(id, { collapsed: !collapsed })}
               className={cn(
-                "nodrag flex w-full items-center gap-2 px-3 py-1.5 text-left text-[10px] transition-colors",
+                "nodrag flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] transition-colors",
                 statusStripClasses(run.response.status)
               )}
             >

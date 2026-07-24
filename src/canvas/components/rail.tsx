@@ -105,7 +105,7 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
         </button>
         {graphsOpen && (
           <div className="absolute bottom-0 left-full ml-2 w-72 rounded-xl border border-border/60 bg-bg-secondary/95 py-1.5 font-sans text-[13px] shadow-[0_12px_28px_-12px_rgba(0,0,0,0.5)] backdrop-blur-sm">
-            <div className="px-3.5 pb-1.5 pt-1 text-[10px] uppercase tracking-[0.14em] text-muted">
+            <div className="px-3.5 pb-1.5 pt-1 text-[12px] text-muted">
               canvases
             </div>
             {Object.values(graphs)
@@ -129,7 +129,7 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
                   )}
                   <span className="flex-1 truncate">{g.name}</span>
                   <span
-                    className="text-[11px] text-muted/70"
+                    className="text-[13px] text-muted"
                     title={`${g.nodes.length} node${g.nodes.length === 1 ? "" : "s"}`}
                   >
                     {g.nodes.length}
@@ -141,7 +141,7 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
                       const name = window.prompt("Rename canvas", g.name);
                       if (name?.trim()) renameGraph(g.id, name.trim());
                     }}
-                    className="hidden rounded p-1 text-muted/60 hover:text-primary group-hover:block"
+                    className="hidden rounded p-1 text-muted hover:text-primary group-hover:block"
                     title="Rename"
                   >
                     <Pencil className="h-3.5 w-3.5" />
@@ -154,7 +154,7 @@ export const Rail = ({ libraryOpen, onToggleLibrary, onOpenImport }: RailProps) 
                         deleteGraph(g.id);
                       }
                     }}
-                    className="hidden rounded p-1 text-muted/60 hover:text-danger group-hover:block"
+                    className="hidden rounded p-1 text-muted hover:text-danger group-hover:block"
                     title="Delete"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

@@ -26,7 +26,7 @@ export const MethodPill = ({ method, onClick, className }: MethodPillProps) => {
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-md font-mono font-semibold text-[11px] tracking-wide",
+        "inline-flex items-center px-2 py-0.5 rounded-md font-mono font-semibold text-[13px] tracking-wide",
         methodPillColor[method],
         onClick && "cursor-pointer hover:brightness-110",
         className

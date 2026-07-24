@@ -59,7 +59,7 @@ export const AssertNodeCard = memo(
     return (
       <div
         className={cn(
-          "group w-[280px] rounded-2xl border bg-bg-secondary/95 font-sans text-[11px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color]",
+          "group w-[320px] rounded-2xl border bg-bg-secondary/95 font-sans text-[13px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color]",
           anyFail
             ? "border-danger/50"
             : allPass
@@ -77,14 +77,14 @@ export const AssertNodeCard = memo(
         {/* eyebrow */}
         <div className="flex items-center gap-1.5 rounded-t-[15px] bg-warning/[0.06] px-3 py-1.5">
           <ShieldCheck className="h-3 w-3 shrink-0 text-warning" />
-          <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-warning">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-warning">
             assert
           </span>
           <div className="flex-1" />
           {evaluation && (
             <span
               className={cn(
-                "text-[9px] font-semibold uppercase tracking-[0.12em]",
+                "text-[11px] font-medium",
                 anyFail ? "text-danger" : "text-success"
               )}
             >
@@ -94,14 +94,14 @@ export const AssertNodeCard = memo(
             </span>
           )}
           {!evaluation && (
-            <span className="text-[9px] uppercase tracking-[0.12em] text-muted">
+            <span className="text-[11px] text-muted">
               awaiting run
             </span>
           )}
           <button
             type="button"
             onClick={() => removeNode(id)}
-            className="nodrag rounded p-0.5 text-muted/60 opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+            className="nodrag rounded p-0.5 text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
             title="Delete assert node"
           >
             <Trash2 className="h-3 w-3" />
@@ -129,7 +129,7 @@ export const AssertNodeCard = memo(
                     }
                   />
                   <input
-                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                    className="nodrag min-w-0 flex-1 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                     placeholder="status · data.id"
                     value={check.path}
                     onChange={(e) =>
@@ -138,7 +138,7 @@ export const AssertNodeCard = memo(
                     spellCheck={false}
                   />
                   <select
-                    className="nodrag shrink-0 cursor-pointer rounded border border-border/40 bg-bg px-1 py-0.5 text-[10px] text-secondary outline-none"
+                    className="nodrag shrink-0 cursor-pointer rounded border border-border/40 bg-bg px-1 py-0.5 text-[12px] text-secondary outline-none"
                     value={check.op}
                     onChange={(e) =>
                       patchCheck(check.id, { op: e.target.value as AssertOp })
@@ -152,7 +152,7 @@ export const AssertNodeCard = memo(
                   </select>
                   {check.op !== "exists" && (
                     <input
-                      className="nodrag w-16 shrink-0 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[10px] outline-none focus:border-accent/60 placeholder:text-muted/50"
+                      className="nodrag w-16 shrink-0 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"
                       placeholder="expected"
                       value={check.value}
                       onChange={(e) =>
@@ -166,7 +166,7 @@ export const AssertNodeCard = memo(
                     onClick={() =>
                       setChecks(checks.filter((c) => c.id !== check.id))
                     }
-                    className="nodrag shrink-0 rounded p-0.5 text-muted/50 hover:text-danger"
+                    className="nodrag shrink-0 rounded p-0.5 text-muted hover:text-danger"
                     title="Remove check"
                   >
                     <X className="h-2.5 w-2.5" />
@@ -174,7 +174,7 @@ export const AssertNodeCard = memo(
                 </div>
                 {result && !result.pass && (
                   <div
-                    className="truncate pl-2.5 font-mono text-[9px] text-danger/80"
+                    className="truncate pl-2.5 font-mono text-[10px] text-danger/80"
                     title={result.actual}
                   >
                     got {result.actual}
@@ -191,7 +191,7 @@ export const AssertNodeCard = memo(
                 { id: uid(), path: "", op: "exists", value: "" },
               ])
             }
-            className="nodrag flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-muted transition-colors hover:text-accent"
+            className="nodrag flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-muted transition-colors hover:text-accent"
           >
             <Plus className="h-2.5 w-2.5" />
             add check

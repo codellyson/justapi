@@ -2,7 +2,6 @@
 
 import type { XYPosition } from "@xyflow/react";
 import { useCanvasStore } from "./use-canvas-store";
-import { useCollectionsStore } from "./use-collections-store";
 import { useEnvironmentStore } from "../stores/use-environment-store";
 import { flowSlug } from "./flow-spec";
 import type { FlowSpec, FlowRequest } from "./flow-spec";
@@ -49,19 +48,7 @@ export const materializeFlow = (
   spec: FlowSpec
 ): { graphId: string; originId: string } => {
   const canvas = useCanvasStore.getState();
-  const collectionsStore = useCollectionsStore.getState();
   const envStore = useEnvironmentStore.getState();
-
-  // Collection backing the origin.
-  let collection = collectionsStore.collections.find(
-    (c) => c.name.toLowerCase() === spec.name.toLowerCase()
-  );
-  if (!collection) {
-    const cid = collectionsStore.createCollection(spec.name);
-    collection = useCollectionsStore
-      .getState()
-      .collections.find((c) => c.id === cid)!;
-  }
 
   // Environment (optional): find by name, create if missing, merge vars.
   let environmentId: string | null = null;
@@ -140,7 +127,7 @@ export const materializeFlow = (
       type: "collection",
       position: originPosition,
       data: {
-        collectionId: collection.id,
+        name: spec.name,
         environmentId,
         ...(spec.defaults?.headers
           ? { headers: { ...spec.defaults.headers } }

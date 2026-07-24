@@ -51,6 +51,75 @@ const makeGraph = (name: string): CanvasGraph => ({
   viewport: null,
 });
 
+/** Origin (collection node) a request traces back to, or null if loose. */
+const originIdOf = (
+  nodeId: string,
+  nodes: CanvasNode[],
+  edges: BindingEdge[]
+): string | null => {
+  const visited = new Set<string>([nodeId]);
+  const queue = [nodeId];
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const e of edges) {
+      if (e.target !== cur) continue;
+      const src = nodes.find((n) => n.id === e.source);
+      if (!src || visited.has(src.id)) continue;
+      if (src.type === "collection") return src.id;
+      if (src.type === "request") {
+        visited.add(src.id);
+        queue.push(src.id);
+      }
+    }
+  }
+  return null;
+};
+
+/**
+ * Force-adopt: every request belongs to a collection. Any request not
+ * tracing to an origin is wired (silently) to one — the board's existing
+ * origin, or a fresh default origin created to its left.
+ */
+const adoptLoose = (
+  nodes: CanvasNode[],
+  edges: BindingEdge[],
+  graphName: string
+): { nodes: CanvasNode[]; edges: BindingEdge[] } => {
+  const loose = nodes.filter(
+    (n) => n.type === "request" && !originIdOf(n.id, nodes, edges)
+  );
+  if (loose.length === 0) return { nodes, edges };
+
+  let nextNodes = nodes;
+  let origin = nodes.find((n) => n.type === "collection");
+  if (!origin) {
+    const anchor = loose[0].position;
+    origin = {
+      id: uid(),
+      type: "collection",
+      position: freePosition(
+        nodes,
+        { x: anchor.x - 340, y: anchor.y },
+        "collection"
+      ),
+      data: { name: graphName || "Requests", environmentId: null },
+    };
+    nextNodes = [origin, ...nodes];
+  }
+  const originId = origin.id;
+  const nextEdges = [
+    ...edges,
+    ...loose.map((r) => ({
+      id: uid(),
+      source: originId,
+      target: r.id,
+      type: "binding" as const,
+      data: undefined,
+    })),
+  ];
+  return { nodes: nextNodes, edges: nextEdges };
+};
+
 interface CanvasState {
   graphs: Record<string, CanvasGraph>;
   activeGraphId: string;
@@ -79,7 +148,7 @@ interface CanvasState {
   addRequestNodes: (
     items: { position: XYPosition; snapshot: CardRequestSnapshot; name: string }[]
   ) => void;
-  addCollectionNode: (position: XYPosition, collectionId: string) => string;
+  addCollectionNode: (position: XYPosition, name: string) => string;
   /** Add a new blank request node wired from a source node — how a flow
    *  tree grows from its origin (and branches from its requests). */
   addLinkedRequest: (sourceNodeId: string, position: XYPosition) => string;
@@ -240,7 +309,8 @@ export const useCanvasStore = create<CanvasState>()(
                 collapsed: false,
               },
             };
-            return { nodes: [...g.nodes, node] };
+            // Every request belongs to a collection — adopt it into one.
+            return adoptLoose([...g.nodes, node], g.edges, g.name);
           })
         );
         return id;
@@ -260,11 +330,11 @@ export const useCanvasStore = create<CanvasState>()(
               };
               placed.push(node);
             }
-            return { nodes: placed };
+            return adoptLoose(placed, g.edges, g.name);
           })
         );
       },
-      addCollectionNode: (position, collectionId) => {
+      addCollectionNode: (position, name) => {
         const id = uid();
         set((s) =>
           withActive(s, (g) => {
@@ -272,7 +342,7 @@ export const useCanvasStore = create<CanvasState>()(
               id,
               type: "collection",
               position: freePosition(g.nodes, position, "collection"),
-              data: { collectionId },
+              data: { name },
             };
             return { nodes: [...g.nodes, node] };
           })
@@ -403,11 +473,11 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: "justapi-canvas",
-      version: 2,
-      // v2: environments moved onto the origin node — standalone env
-      // nodes (and their edges) are stripped from persisted graphs.
+      version: 3,
       migrate: (persisted, version) => {
         const state = persisted as Pick<CanvasState, "graphs" | "activeGraphId">;
+        // v2: environments moved onto the origin node — standalone env
+        // nodes (and their edges) are stripped from persisted graphs.
         if (version < 2 && state?.graphs) {
           for (const g of Object.values(state.graphs)) {
             const envIds = new Set(
@@ -420,6 +490,37 @@ export const useCanvasStore = create<CanvasState>()(
             g.edges = g.edges.filter(
               (e) => !envIds.has(e.source) && !envIds.has(e.target)
             );
+          }
+        }
+        // v3: the origin owns its name (dropping the collectionId → global
+        // collections-store indirection), and every request is adopted
+        // into a collection.
+        if (version < 3 && state?.graphs) {
+          const idToName: Record<string, string> = {};
+          try {
+            const raw = localStorage.getItem("justapi-canvas-collections");
+            const parsed = raw ? JSON.parse(raw) : null;
+            for (const c of parsed?.state?.collections ?? []) {
+              idToName[c.id] = c.name;
+            }
+          } catch {
+            /* no legacy collections — fall back to the graph name */
+          }
+          for (const g of Object.values(state.graphs)) {
+            for (const n of g.nodes) {
+              if (n.type !== "collection") continue;
+              const d = n.data as { collectionId?: string; name?: string };
+              if (d.name === undefined) {
+                d.name =
+                  (d.collectionId && idToName[d.collectionId]) ||
+                  g.name ||
+                  "Requests";
+              }
+              delete d.collectionId;
+            }
+            const adopted = adoptLoose(g.nodes, g.edges, g.name);
+            g.nodes = adopted.nodes;
+            g.edges = adopted.edges;
           }
         }
         return state;

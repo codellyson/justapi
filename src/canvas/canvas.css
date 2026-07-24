@@ -111,3 +111,69 @@
   max-height: 11px;
 }
 
+/* Onboarding: the origin card breathes, its wire streams, the ghost floats. */
+@keyframes justapi-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--accent) / 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgb(var(--accent) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--accent) / 0);
+  }
+}
+
+.justapi-pulse-ring {
+  animation: justapi-pulse-ring 2.4s ease-out infinite;
+}
+
+@keyframes justapi-dash {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+.justapi-dash {
+  animation: justapi-dash 1s linear infinite;
+}
+
+@keyframes justapi-ghost-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.justapi-ghost-float {
+  animation: justapi-ghost-float 3s ease-in-out infinite;
+}
+
+/* Coach-mark tour: the spotlight ring softly pulses. */
+@keyframes justapi-tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.justapi-tour-tip {
+  animation: justapi-tour-in 0.2s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .justapi-pulse-ring,
+  .justapi-dash,
+  .justapi-ghost-float,
+  .justapi-tour-tip {
+    animation: none;
+  }
+}
+

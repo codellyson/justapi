@@ -72,7 +72,7 @@ export const StatusBar = () => {
   const bindingCount = graph.edges.filter((e) => e.data).length;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 z-30 flex h-7 items-center gap-3 border-t border-border/50 bg-bg-secondary/90 px-3 font-mono text-[12px] text-muted backdrop-blur-sm">
+    <div className="z-30 flex h-7 flex-none items-center gap-3 border-t border-border/50 bg-bg-secondary px-3 font-mono text-[12px] text-muted">
       <span className="tracking-[0.08em] text-secondary">JUSTAPI/1.1</span>
 
       {latest.pending ? (
@@ -109,15 +109,16 @@ export const StatusBar = () => {
         {bindingCount === 1 ? "" : "s"}
       </span>
 
-      <div className="flex items-center gap-0.5">
-        <button
-          type="button"
-          onClick={tidy}
-          className="rounded p-1 text-secondary hover:text-primary hover:bg-bg/60"
-          title="Tidy — auto-arrange the tree"
-        >
-          <LayoutGrid className="h-3 w-3" />
-        </button>
+      <button
+        type="button"
+        onClick={tidy}
+        className="rounded p-1 text-secondary hover:text-primary hover:bg-bg/60"
+        title="Tidy — auto-arrange the tree"
+      >
+        <LayoutGrid className="h-3 w-3" />
+      </button>
+
+      <div className="flex items-center gap-0.5 border-l border-border/50 pl-2">
         <button
           type="button"
           onClick={() => void zoomOut({ duration: 150 })}

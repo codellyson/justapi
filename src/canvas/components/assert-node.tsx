@@ -58,8 +58,9 @@ export const AssertNodeCard = memo(
 
     return (
       <div
+        data-tour="assert"
         className={cn(
-          "group w-[320px] rounded-2xl border bg-bg-secondary/95 font-sans text-[13px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color]",
+          "group w-[320px] rounded-2xl border bg-gradient-to-b from-bg-secondary/95 to-bg/85 font-sans text-[13px] text-primary shadow-[0_20px_48px_-28px_rgba(0,0,0,0.35)] backdrop-blur-sm transition-[border-color]",
           anyFail
             ? "border-danger/50"
             : allPass

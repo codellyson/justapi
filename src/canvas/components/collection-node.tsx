@@ -15,6 +15,7 @@ import {
   List,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
+import { Select } from "./select";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
 import type {
   CollectionNode as CollectionNodeType,
@@ -186,23 +187,23 @@ export const CollectionNodeCard = memo(
                 env
               </span>
             </button>
-            <select
-              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[12px] text-secondary outline-none"
+            <Select
+              wrapperClassName="min-w-0 flex-1"
+              className="w-full cursor-pointer justify-end text-[12px] text-secondary"
+              align="right"
+              title="Environment for this flow"
               value={environmentId ?? ""}
-              onChange={(e) =>
-                updateNodeData(id, { environmentId: e.target.value || null })
-              }
-            >
-              <option value="">
-                active
-                {env && !environmentId ? ` (${env.name.toLowerCase()})` : ""}
-              </option>
-              {environments.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => updateNodeData(id, { environmentId: v || null })}
+              options={[
+                {
+                  value: "",
+                  label: `active${
+                    env && !environmentId ? ` (${env.name.toLowerCase()})` : ""
+                  }`,
+                },
+                ...environments.map((e) => ({ value: e.id, label: e.name })),
+              ]}
+            />
           </div>
           {envOpen && env && (
             <div className="space-y-1 px-3 pb-2">
@@ -276,18 +277,20 @@ export const CollectionNodeCard = memo(
                 auth
               </span>
             </button>
-            <select
-              className="nodrag min-w-0 flex-1 cursor-pointer bg-transparent text-right text-[12px] text-secondary outline-none"
+            <Select
+              wrapperClassName="min-w-0 flex-1"
+              className="w-full cursor-pointer justify-end text-[12px] text-secondary"
+              align="right"
+              title="Default auth for this flow"
               value={auth}
-              onChange={(e) =>
-                updateNodeData(id, { authType: e.target.value as AuthType })
-              }
-            >
-              <option value="none">none</option>
-              <option value="bearer">bearer</option>
-              <option value="basic">basic</option>
-              <option value="api-key">api key</option>
-            </select>
+              onChange={(v) => updateNodeData(id, { authType: v as AuthType })}
+              options={[
+                { value: "none", label: "none" },
+                { value: "bearer", label: "bearer" },
+                { value: "basic", label: "basic" },
+                { value: "api-key", label: "api key" },
+              ]}
+            />
           </div>
           {authOpen && auth !== "none" && (
             <div className="space-y-1 px-3 pb-2">

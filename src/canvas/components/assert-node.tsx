@@ -4,6 +4,7 @@ import { memo, useMemo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ShieldCheck, Trash2, Plus, X } from "lucide-react";
 import { cn } from "../../utils/cn";
+import { Select } from "./select";
 import { ASSERT_OPS, evaluateChecks } from "../asserts";
 import type {
   AssertNode as AssertNodeType,
@@ -138,19 +139,17 @@ export const AssertNodeCard = memo(
                     }
                     spellCheck={false}
                   />
-                  <select
-                    className="nodrag shrink-0 cursor-pointer rounded border border-border/40 bg-bg px-1 py-0.5 text-[12px] text-secondary outline-none"
+                  <Select
+                    wrapperClassName="shrink-0"
+                    className="cursor-pointer rounded border border-border/40 bg-bg px-1.5 py-0.5 text-[12px] text-secondary"
+                    align="left"
                     value={check.op}
-                    onChange={(e) =>
-                      patchCheck(check.id, { op: e.target.value as AssertOp })
-                    }
-                  >
-                    {ASSERT_OPS.map((op) => (
-                      <option key={op.value} value={op.value}>
-                        {op.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => patchCheck(check.id, { op: v as AssertOp })}
+                    options={ASSERT_OPS.map((op) => ({
+                      value: op.value,
+                      label: op.label,
+                    }))}
+                  />
                   {check.op !== "exists" && (
                     <input
                       className="nodrag w-16 shrink-0 rounded border border-border/40 bg-bg px-1.5 py-0.5 font-mono text-[12px] outline-none focus:border-accent/60 placeholder:text-muted/70"

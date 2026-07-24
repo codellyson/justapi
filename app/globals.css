@@ -8,6 +8,10 @@
  * pre-hydration fallback so SSR/initial paint doesn't flash.
  */
 :root {
+  /* Tell the browser the UI's scheme so native controls (select popups,
+     option lists, scrollbars, date pickers) render dark in dark mode
+     instead of defaulting to a light popup. Toggled with .dark below. */
+  color-scheme: light;
   --bg: 255 255 255;
   --bg-secondary: 246 248 250;
   --border: 208 215 222;
@@ -23,6 +27,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --bg: 13 17 23;
   --bg-secondary: 22 27 34;
   --border: 48 54 61;

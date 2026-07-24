@@ -6,9 +6,11 @@ import { extractFromResponse, extractedToString } from "./get-path";
 import { evaluateChecks } from "./asserts";
 import { useCanvasStore } from "./use-canvas-store";
 import { useRunStore, abortControllers } from "./use-run-store";
+import type { HttpResponse } from "../utils/http";
 import type {
   CanvasGraph,
   CanvasNode,
+  Capture,
   RequestNodeData,
   CollectionNodeData,
   AssertNodeData,
@@ -196,6 +198,37 @@ export const collectBoundHeaders = (
   return headers;
 };
 
+/**
+ * Post-response captures: pull values out of a request's own response and
+ * set them as variables on the flow's environment (the origin's env, or the
+ * active one), so any downstream {{var}} picks them up — no wiring needed.
+ */
+const applyCaptures = (
+  captures: Capture[] | undefined,
+  response: HttpResponse,
+  nodeId: string,
+  g: CanvasGraph
+): void => {
+  const list = (captures ?? []).filter((c) => c.var?.trim() && c.path?.trim());
+  if (list.length === 0) return;
+
+  const envStore = useEnvironmentStore.getState();
+  const originEnvId = (
+    findOrigin(nodeId, g)?.data as CollectionNodeData | undefined
+  )?.environmentId;
+  const envId = originEnvId ?? envStore.activeEnvironmentId;
+  const env = envStore.environments.find((e) => e.id === envId);
+  if (!env) return;
+
+  const next = { ...env.variables };
+  for (const c of list) {
+    next[c.var.trim()] = extractedToString(
+      extractFromResponse(response, c.path)
+    );
+  }
+  envStore.updateEnvironment(env.id, { variables: next });
+};
+
 const runSingle = async (nodeId: string, g: CanvasGraph): Promise<boolean> => {
   const node = nodeById(g, nodeId);
   if (node?.type !== "request") return false;
@@ -243,6 +276,7 @@ const runSingle = async (nodeId: string, g: CanvasGraph): Promise<boolean> => {
       return false;
     }
     useRunStore.getState().setSuccess(nodeId, response);
+    applyCaptures(data.captures, response, nodeId, g);
     return true;
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") {

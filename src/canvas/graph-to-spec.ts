@@ -105,6 +105,10 @@ export const graphToFlowSpec = (
     if (parent) fr.after = specId(parent.source);
     if (bindings.length) fr.bindings = bindings;
     if (myAsserts.length) fr.asserts = myAsserts;
+    const captures = (r.data.captures ?? []).filter((c) => c.var && c.path);
+    if (captures.length) {
+      fr.captures = captures.map((c) => ({ path: c.path, var: c.var }));
+    }
     return fr;
   });
 
@@ -203,6 +207,10 @@ export const flowSpecToYaml = (spec: FlowSpec): string => {
         )
         .join(", ");
       out.push(`    assert: [ ${inner} ]`);
+    }
+    if (r.captures?.length) {
+      const inner = r.captures.map((c) => `${c.var}: ${c.path}`).join(", ");
+      out.push(`    capture: { ${inner} }`);
     }
   }
 

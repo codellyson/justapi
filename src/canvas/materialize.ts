@@ -172,6 +172,15 @@ export const materializeFlow = (
         snapshot,
         collapsed: true,
         specId: r.id,
+        ...(r.captures?.length
+          ? {
+              captures: r.captures.map((c) => ({
+                id: uid(),
+                path: c.path,
+                var: c.var,
+              })),
+            }
+          : {}),
       },
     });
   }

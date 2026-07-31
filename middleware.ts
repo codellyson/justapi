@@ -4,33 +4,29 @@ import { getSessionCookie } from "better-auth/cookies";
 const AUTH_PAGES = ["/login", "/signup"];
 
 /**
- * Optimistic route protection: a cheap session-cookie presence check (no DB
- * round-trip — the API handlers do the real verification via requireAuth).
- * Unauthenticated → bounced to /login; already-authenticated → kept out of the
- * auth pages. API routes are excluded (see matcher) and gate themselves.
+ * The canvas is open to everyone — anonymous users work locally (localStorage).
+ * Only account-scoped pages require a session; signing in unlocks the remote
+ * features (agent bridge, sharing, token minting). This is an optimistic
+ * cookie-presence check (no DB round-trip — the API handlers do the real
+ * verification via requireAuth).
  */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = Boolean(getSessionCookie(request));
-  const onAuthPage = AUTH_PAGES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
 
-  if (!hasSession && !onAuthPage) {
+  // /account manages the signed-in user — bounce anonymous visitors to login.
+  if (!hasSession && pathname.startsWith("/account")) {
     const url = new URL("/login", request.url);
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (hasSession && onAuthPage) {
+  // Signed-in users have no reason to see the auth pages.
+  if (hasSession && AUTH_PAGES.includes(pathname)) {
     return NextResponse.redirect(new URL("/", request.url));
   }
   return NextResponse.next();
 }
 
 export const config = {
-  // Everything except API routes, Next internals, and static assets. Those are
-  // excluded so /api/auth stays reachable and the login page can load its icons.
-  matcher: [
-    "/((?!api|_next/static|_next/image|favicon.svg|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico)$).*)",
-  ],
+  matcher: ["/account", "/account/:path*", "/login", "/signup"],
 };

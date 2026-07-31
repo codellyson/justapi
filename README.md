@@ -89,14 +89,20 @@ other MCP clients. See [docs/agent-api.md](docs/agent-api.md).
 
 ## Accounts & auth
 
-The app is account-gated. `middleware.ts` bounces unauthenticated visitors to
-`/login`; the bridge routes (`/api/flows`, `/api/agent/*`, `/api/share/*`) call
-`requireAuth`, which accepts **either** the browser session cookie **or** an
-`Authorization: Bearer <token>`.
+**Auth is optional.** Anonymous users get the full canvas locally — graphs live
+in their browser's localStorage. Signing in unlocks the account-scoped features:
+the agent bridge, sharing, token minting, and (later) remote sync.
 
-- **Users** sign up at `/signup`, sign in at `/login`.
-- **Tokens** are minted at `/account` (Account icon in the rail) — the plaintext
-  is shown once. Use it as the MCP bridge's `JUSTAPI_TOKEN`.
+`middleware.ts` only guards `/account`; everything else is open. The bridge
+routes (`/api/flows`, `/api/agent/*`, `/api/share/*`) call `requireAuth`, which
+accepts **either** the browser session cookie **or** an
+`Authorization: Bearer <token>` — so a signed-out canvas simply doesn't open
+them (the agent-bridge SSE only connects when signed in).
+
+- **Users** sign up at `/signup`, sign in at `/login`. The rail's account icon
+  shows "Sign in" when signed out, "Account" when signed in.
+- **Tokens** are minted at `/account` — the plaintext is shown once. Use it as
+  the MCP bridge's `JUSTAPI_TOKEN`.
 - Auth is [better-auth](https://better-auth.com): `src/server/auth.ts` builds it
   per-request from the D1 binding; `app/api/auth/[...all]` mounts the handler.
   Schema lives in `src/db/schema.ts` (regenerate with `pnpm auth:generate`, then

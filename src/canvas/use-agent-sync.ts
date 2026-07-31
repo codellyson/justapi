@@ -11,9 +11,14 @@ import type { FlowSpec } from "./flow-spec";
  * Live link to the agent bridge: flows pushed over HTTP materialize on
  * the board as they arrive, run requests execute here in the browser,
  * and reports post back so the agent's long-poll resolves.
+ *
+ * The bridge is account-scoped, so it only connects when signed in —
+ * anonymous users work locally and never open the (gated) SSE stream.
  */
-export const useAgentSync = (): void => {
+export const useAgentSync = (enabled: boolean): void => {
   useEffect(() => {
+    if (!enabled) return;
+
     let source: EventSource | null = null;
     let retry: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
@@ -100,5 +105,5 @@ export const useAgentSync = (): void => {
       if (retry) clearTimeout(retry);
       source?.close();
     };
-  }, []);
+  }, [enabled]);
 };

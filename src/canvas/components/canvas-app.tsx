@@ -20,6 +20,7 @@ import { settlePosition } from "../layout";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
 import { useAgentSync } from "../use-agent-sync";
+import { useSession } from "../../lib/auth-client";
 import { RequestNodeCard } from "./request-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
@@ -111,8 +112,10 @@ const CanvasInner = () => {
   const { screenToFlowPosition } = useReactFlow();
 
   // Agents push flows and run requests through the local bridge; this
-  // browser is where they materialize and execute.
-  useAgentSync();
+  // browser is where they materialize and execute. Signed-in only — the
+  // bridge is account-scoped.
+  const { data: session } = useSession();
+  useAgentSync(Boolean(session));
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => setSelectedNodeId(node.id),

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "../utils/cn";
 import { authClient } from "../lib/auth-client";
@@ -11,11 +10,12 @@ type Mode = "login" | "signup";
 const input =
   "w-full rounded-md border border-border/50 bg-bg px-2.5 py-2 text-[13px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70";
 
-export const AuthForm = ({ mode }: { mode: Mode }) => {
+export const AuthForm = ({ initialMode }: { initialMode: Mode }) => {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/";
 
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -117,16 +117,30 @@ export const AuthForm = ({ mode }: { mode: Mode }) => {
           {isSignup ? (
             <>
               Already have an account?{" "}
-              <Link href="/login" className="text-accent hover:underline">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("login");
+                  setError(null);
+                }}
+                className="text-accent hover:underline"
+              >
                 Sign in
-              </Link>
+              </button>
             </>
           ) : (
             <>
               New to JustAPI?{" "}
-              <Link href="/signup" className="text-accent hover:underline">
+              <button
+                type="button"
+                onClick={() => {
+                  setMode("signup");
+                  setError(null);
+                }}
+                className="text-accent hover:underline"
+              >
                 Create an account
-              </Link>
+              </button>
             </>
           )}
         </div>

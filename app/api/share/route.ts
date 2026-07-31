@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { generateId, put } from './store';
+import { requireAuth, isAuthError } from '@/src/server/require-auth';
 
 const MAX_BYTES = 50_000;
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuth(request);
+  if (isAuthError(auth)) return auth;
   const body = await request.text();
   if (body.length === 0 || body.length > MAX_BYTES) {
     return NextResponse.json(
@@ -19,7 +23,8 @@ export async function POST(request: NextRequest) {
 
   const id = generateId();
   try {
-    await put(id, body);
+    const { env } = await getCloudflareContext({ async: true });
+    await put(env.SHARE_BUCKET, id, body);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Storage failed';
     return NextResponse.json({ error: message }, { status: 500 });

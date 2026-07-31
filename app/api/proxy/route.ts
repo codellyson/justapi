@@ -24,7 +24,14 @@ function normalizeLocalhost(rawUrl: string): {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   try {
-    const body = await request.json();
+    const body = (await request.json()) as {
+      url?: string;
+      method?: string;
+      headers?: Record<string, string>;
+      body?: string;
+      params?: Record<string, unknown>;
+      isFormData?: boolean;
+    };
     const {
       url,
       method,

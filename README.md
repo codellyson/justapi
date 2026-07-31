@@ -6,18 +6,24 @@ OpenAPI and fan endpoints out as nodes.
 
 ## Stack
 
-- Next.js 15 (App Router)
+- Next.js 15 (App Router) on **Cloudflare Workers** via `@opennextjs/cloudflare`
 - React 18
 - @xyflow/react (React Flow) for the canvas
-- Zustand for state
+- Zustand for client state
+- **better-auth** (email/password + API keys) on **Cloudflare D1** (Drizzle ORM)
+- **R2** for share snapshots
 - Tailwind CSS
 
 ## Develop
 
 ```bash
 pnpm install
-pnpm dev
+pnpm db:migrate:local   # apply auth schema to the local D1
+pnpm dev                # next dev on :3100, Cloudflare bindings via miniflare
 ```
+
+Then open the app, create an account, and you're on the canvas. Auth secrets
+live in `.dev.vars` (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`).
 
 ## Build
 
@@ -28,8 +34,10 @@ pnpm start
 
 ## Layout
 
-- `app/` — Next route files: `page.tsx` renders the canvas; `api/flows` + `api/agent`
-  (the agent bridge), `api/proxy` (+ `multipart`), and `api/share` routes; root `layout.tsx`.
+- `app/` — Next route files: `page.tsx` renders the canvas; `login/`, `signup/`, `account/`
+  pages; `api/auth/[...all]` (better-auth), `api/flows` + `api/agent` (the agent bridge),
+  `api/proxy` (+ `multipart`), and `api/share` routes; root `layout.tsx`.
+- `middleware.ts` — optimistic session-cookie gate; redirects unauthenticated visitors to `/login`.
 - `src/canvas/` — the client app:
   - `use-canvas-store.ts` — persisted graphs (nodes/edges/viewport, multiple named canvases).
   - `use-run-store.ts` — in-memory per-node run state (responses are never persisted).
@@ -40,9 +48,12 @@ pnpm start
   - `parse-curl.ts` / `parse-openapi.ts` — importers behind the import dialog.
   - `use-agent-sync.ts` — subscribes the browser as the execution host for agent-pushed flows (SSE).
   - `components/` — request/collection/assert nodes, binding edge + inspector, rail, library, status bar, import dialog.
-- `src/server/` — server-side flow layer:
+- `src/server/` — server-side layer:
+  - `auth.ts` — builds better-auth per-request from the D1 binding; `auth-shared.ts` holds the plugin config.
+  - `require-auth.ts` — bridge guard: session cookie or bearer token → userId, else 401.
   - `agent-hub.ts` — in-memory hub (flows persisted to `.justapi/flows/*.json`); SSE broadcast + run long-polling.
   - `run-flow-spec.ts` — headless executor that mirrors the browser engine's semantics and report shape.
+- `src/db/schema.ts` — better-auth Drizzle schema (D1); `src/lib/auth-client.ts` — the browser auth client.
 - `mcp/server.mjs` — stdio MCP server exposing flows as tools (`pnpm mcp`).
 - `src/stores/use-environment-store.ts` — environments with `{{variable}}` substitution.
 - `src/utils/` — `http` (proxy fetch), `variables`, `har`, theme plumbing.
@@ -76,6 +87,43 @@ runs execute headless server-side with the same report. An MCP server
 (`pnpm mcp`) exposes the same as native tools for Claude Code and
 other MCP clients. See [docs/agent-api.md](docs/agent-api.md).
 
+## Accounts & auth
+
+The app is account-gated. `middleware.ts` bounces unauthenticated visitors to
+`/login`; the bridge routes (`/api/flows`, `/api/agent/*`, `/api/share/*`) call
+`requireAuth`, which accepts **either** the browser session cookie **or** an
+`Authorization: Bearer <token>`.
+
+- **Users** sign up at `/signup`, sign in at `/login`.
+- **Tokens** are minted at `/account` (Account icon in the rail) — the plaintext
+  is shown once. Use it as the MCP bridge's `JUSTAPI_TOKEN`.
+- Auth is [better-auth](https://better-auth.com): `src/server/auth.ts` builds it
+  per-request from the D1 binding; `app/api/auth/[...all]` mounts the handler.
+  Schema lives in `src/db/schema.ts` (regenerate with `pnpm auth:generate`, then
+  `pnpm db:generate` for the SQL migration).
+
+The MCP server (`mcp/server.mjs`) sends the token on every call:
+
+```bash
+claude mcp add justapi \
+  -e JUSTAPI_URL=http://localhost:3100 \
+  -e JUSTAPI_TOKEN=<minted-token> \
+  -- node /path/to/justapi/mcp/server.mjs
+```
+
+## Deploy (Cloudflare)
+
+```bash
+wrangler d1 create justapi                 # paste database_id into wrangler.jsonc
+wrangler r2 bucket create justapi-shares
+pnpm db:migrate                            # apply schema to remote D1
+wrangler secret put BETTER_AUTH_SECRET
+wrangler secret put BETTER_AUTH_URL        # your deployed origin
+pnpm deploy                                # opennextjs build + deploy
+```
+
+`pnpm preview` runs the built Worker locally (miniflare) for a production-like check.
+
 ## Outgoing requests
 
 The browser calls `/api/proxy`, which forwards to the target URL server-side.
@@ -83,7 +131,8 @@ This sidesteps CORS for arbitrary endpoints.
 
 ## Persistence
 
-Graphs (nodes, edges, viewport) persist to localStorage (`justapi-canvas`).
-Responses are kept in memory only. Share links (`/?s=ID`) resolve via
-`/api/share` (Vercel Blob) and spawn a request node; legacy
+Graphs (nodes, edges, viewport) persist to localStorage (`justapi-canvas`) —
+canvas data is per-browser, not yet synced to the account. Responses are kept in
+memory only. Accounts, sessions, and API tokens persist to **D1**. Share links
+(`/?s=ID`) resolve via `/api/share` (**R2**) and spawn a request node; legacy
 `/playground?s=ID` links redirect here.

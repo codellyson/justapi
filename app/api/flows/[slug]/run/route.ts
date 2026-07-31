@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { agentHub } from "@/src/server/agent-hub";
 import { runFlowSpecHeadless } from "@/src/server/run-flow-spec";
+import { requireAuth, isAuthError } from "@/src/server/require-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const auth = await requireAuth(request);
+  if (isAuthError(auth)) return auth;
   const { slug } = await params;
   const spec = agentHub.get(slug);
   if (!spec) {

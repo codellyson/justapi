@@ -77,7 +77,8 @@ export const useAgentSync = (): void => {
               void fetch(`/api/flows/${f.slug}`)
                 .then((r) => (r.ok ? r.json() : null))
                 .then((data) => {
-                  if (data?.spec) materializeFlow(data.spec as FlowSpec);
+                  const spec = (data as { spec?: FlowSpec } | null)?.spec;
+                  if (spec) materializeFlow(spec);
                 });
             }
           }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useReactFlow } from "@xyflow/react";
 import {
   Plus,
@@ -9,6 +10,7 @@ import {
   Layers,
   CodeXml,
   HelpCircle,
+  UserRound,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useCanvasStore } from "../use-canvas-store";
@@ -123,6 +125,9 @@ export const Rail = ({
 
       <div className="flex-1" />
 
+      <Link href="/account" className={railBtn} title="Account & tokens">
+        <UserRound className="h-4 w-4" />
+      </Link>
       <button
         type="button"
         onClick={onStartTour}

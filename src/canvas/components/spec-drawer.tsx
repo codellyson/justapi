@@ -104,7 +104,8 @@ export const SpecDrawer = ({ onClose }: SpecDrawerProps) => {
     let alive = true;
     fetch("/api/flows")
       .then((r) => (r.ok ? r.json() : { flows: [] }))
-      .then((d: { flows?: { slug: string }[] }) => {
+      .then((value) => {
+        const d = value as { flows?: { slug: string }[] };
         if (alive) setFiles((d.flows ?? []).map((f) => f.slug));
       })
       .catch(() => alive && setFiles([]));

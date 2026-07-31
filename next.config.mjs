@@ -6,12 +6,18 @@ const nextConfig = {
   // off the opennextjs build's file tracing.
   outputFileTracingRoot: import.meta.dirname,
   async redirects() {
-    // The canvas is the app now; old entry points (and their share links,
-    // query strings are preserved) land on the root.
+    // The canvas lives at /app now (/ is the landing page). Old entry points
+    // land there, and legacy /?s=ID share links carry their id across.
     return [
-      { source: '/playground', destination: '/', permanent: false },
-      { source: '/canvas', destination: '/', permanent: false },
-      { source: '/expand', destination: '/', permanent: false },
+      { source: '/playground', destination: '/app', permanent: false },
+      { source: '/canvas', destination: '/app', permanent: false },
+      { source: '/expand', destination: '/app', permanent: false },
+      {
+        source: '/',
+        has: [{ type: 'query', key: 's', value: '(?<s>.*)' }],
+        destination: '/app?s=:s',
+        permanent: false,
+      },
     ];
   },
   webpack: (config, { isServer }) => {

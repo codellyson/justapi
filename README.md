@@ -34,9 +34,10 @@ pnpm start
 
 ## Layout
 
-- `app/` — Next route files: `page.tsx` renders the canvas; `login/`, `signup/`, `account/`
-  pages; `api/auth/[...all]` (better-auth), `api/flows` + `api/agent` (the agent bridge),
-  `api/proxy` (+ `multipart`), and `api/share` routes; root `layout.tsx`.
+- `app/` — Next route files: `page.tsx` is the marketing landing, `app/page.tsx` renders the
+  canvas (route `/app`); `login/`, `signup/`, `account/` pages; `api/auth/[...all]` (better-auth),
+  `api/flows` + `api/agent` (the agent bridge), `api/proxy` (+ `multipart`), and `api/share`
+  routes; root `layout.tsx`. `src/marketing/` holds the landing's client bits (theme toggle).
 - `middleware.ts` — optimistic session-cookie gate; redirects unauthenticated visitors to `/login`.
 - `src/canvas/` — the client app:
   - `use-canvas-store.ts` — persisted graphs (nodes/edges/viewport, multiple named canvases).
@@ -140,5 +141,5 @@ This sidesteps CORS for arbitrary endpoints.
 Graphs (nodes, edges, viewport) persist to localStorage (`justapi-canvas`) —
 canvas data is per-browser, not yet synced to the account. Responses are kept in
 memory only. Accounts, sessions, and API tokens persist to **D1**. Share links
-(`/?s=ID`) resolve via `/api/share` (**R2**) and spawn a request node; legacy
-`/playground?s=ID` links redirect here.
+(`/app?s=ID`) resolve via `/api/share` (**R2**) and spawn a request node; legacy
+`/?s=ID` and `/playground?s=ID` links redirect to the canvas at `/app`.

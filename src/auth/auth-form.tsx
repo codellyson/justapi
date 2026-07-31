@@ -13,7 +13,7 @@ const input =
 export const AuthForm = ({ initialMode }: { initialMode: Mode }) => {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/";
+  const next = params.get("next") || "/app";
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState("");

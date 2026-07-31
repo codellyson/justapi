@@ -80,7 +80,7 @@ export default function AccountPage() {
       <div className="mx-auto w-full max-w-[640px] px-5 py-8">
         <div className="mb-6 flex items-center justify-between">
           <Link
-            href="/"
+            href="/app"
             className="flex items-center gap-1.5 text-[13px] text-muted hover:text-primary"
           >
             <ArrowLeft className="h-3.5 w-3.5" />

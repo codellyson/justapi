@@ -24,7 +24,8 @@ import { useAgentSync } from "../use-agent-sync";
 import { useSession } from "../../lib/auth-client";
 import { isEmbedded } from "../embedded";
 import { materializeFlow } from "../materialize";
-import { DEMO_FLOW } from "../demo-flow";
+import { makeDemoFlow } from "../demo-flow";
+import { DemoOverlay } from "./demo-overlay";
 import { RequestNodeCard } from "./request-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
@@ -123,7 +124,7 @@ const CanvasInner = () => {
 
   useEffect(() => {
     if (!embedded) return;
-    materializeFlow(DEMO_FLOW);
+    materializeFlow(makeDemoFlow(`${window.location.origin}/api/sample`));
     // The demo is added after React Flow's initial (empty-graph) fitView, which
     // doesn't re-fire on graph changes — so once the new nodes have mounted and
     // measured, arrange and frame them (what the tidy button does manually).
@@ -161,8 +162,8 @@ const CanvasInner = () => {
   // finish faster than React re-renders; a paced queue dwells on each node so a
   // fast flow doesn't skip straight to the last one. Only request nodes are
   // followed — the origin stays pending for the whole flow. Pans, never zooms.
+  // Runs in the embed too, so the demo play button gets the same follow.
   useEffect(() => {
-    if (embedded) return;
     const queue: string[] = [];
     const seen = new Set<string>();
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -241,7 +242,7 @@ const CanvasInner = () => {
       unsub();
       if (timer) clearTimeout(timer);
     };
-  }, [graph.id, embedded, setCenter, getZoom]);
+  }, [graph.id, setCenter, getZoom]);
 
   // Agents push flows and run requests through the local bridge; this
   // browser is where they materialize and execute. Signed-in only (the
@@ -391,6 +392,7 @@ const CanvasInner = () => {
           </ReactFlow>
 
           {!embedded && <ControlCluster />}
+          {embedded && <DemoOverlay />}
           {!embedded && graph.nodes.length === 0 && (
             <EmptyState onOpenImport={() => setImportOpen(true)} />
           )}

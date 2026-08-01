@@ -16,6 +16,7 @@ import "../canvas.css";
 import { cn } from "../../utils/cn";
 
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
+import { useRunStore } from "../use-run-store";
 import { settlePosition } from "../layout";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
@@ -112,7 +113,7 @@ const CanvasInner = () => {
     }
   }, []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const { screenToFlowPosition, fitView, setViewport: applyViewport } =
+  const { screenToFlowPosition, fitView, setViewport: applyViewport, setCenter, getZoom } =
     useReactFlow();
   const tidyGraph = useCanvasStore((s) => s.tidyGraph);
 
@@ -153,6 +154,33 @@ const CanvasInner = () => {
     }, 150);
     return () => clearTimeout(t);
   }, [graph.id, embedded, applyViewport, fitView]);
+
+  // Follow the run: as each node starts executing, pan the camera to it so the
+  // human watches the flow move through the tree. Keeps the current zoom (pans,
+  // doesn't zoom) and only re-centers on a node it hasn't followed yet.
+  const runs = useRunStore((s) => s.runs);
+  const followedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (embedded) return;
+    const pending = graph.nodes.filter(
+      (n) => runs[n.id]?.status === "pending"
+    );
+    if (pending.length === 0) {
+      followedRef.current = null;
+      return;
+    }
+    const target =
+      pending.find((n) => n.id !== followedRef.current) ??
+      pending[pending.length - 1];
+    if (target.id === followedRef.current) return;
+    followedRef.current = target.id;
+    const w = target.measured?.width ?? target.width ?? 320;
+    const h = target.measured?.height ?? target.height ?? 120;
+    void setCenter(target.position.x + w / 2, target.position.y + h / 2, {
+      zoom: getZoom(),
+      duration: 500,
+    });
+  }, [runs, graph.nodes, embedded, setCenter, getZoom]);
 
   // Agents push flows and run requests through the local bridge; this
   // browser is where they materialize and execute. Signed-in only (the

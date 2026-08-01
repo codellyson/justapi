@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -112,7 +112,8 @@ const CanvasInner = () => {
     }
   }, []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { screenToFlowPosition, fitView, setViewport: applyViewport } =
+    useReactFlow();
   const tidyGraph = useCanvasStore((s) => s.tidyGraph);
 
   // Live preview inside the marketing-page iframe: read-only, no bridge, and
@@ -131,6 +132,27 @@ const CanvasInner = () => {
     }, 250);
     return () => clearTimeout(t);
   }, [embedded, tidyGraph, fitView]);
+
+  // After the initial mount, React Flow's fitView prop doesn't re-fire when the
+  // active graph changes — an agent materializes a flow, or you switch canvases.
+  // Restore that graph's saved view, or frame it if it has none. (No re-layout,
+  // so a hand-arranged board is never reshuffled.)
+  const prevGraphIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (embedded) return;
+    const prev = prevGraphIdRef.current;
+    prevGraphIdRef.current = graph.id;
+    if (prev === null || prev === graph.id) return;
+    const vp = useCanvasStore.getState().graphs[graph.id]?.viewport;
+    if (vp) {
+      void applyViewport(vp, { duration: 200 });
+      return;
+    }
+    const t = setTimeout(() => {
+      void fitView({ padding: 0.2, minZoom: 0.65, maxZoom: 1, duration: 250 });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [graph.id, embedded, applyViewport, fitView]);
 
   // Agents push flows and run requests through the local bridge; this
   // browser is where they materialize and execute. Signed-in only (the

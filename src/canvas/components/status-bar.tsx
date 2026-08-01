@@ -92,7 +92,14 @@ export const StatusBar = () => {
           </span>
         </span>
       ) : latest.run?.error ? (
-        <span className="truncate text-danger">{latest.run.error}</span>
+        <span
+          className={cn(
+            "truncate",
+            latest.run.status === "error" ? "text-danger" : "text-success"
+          )}
+        >
+          {latest.run.error}
+        </span>
       ) : (
         <span>ready — drag between handles to chain requests</span>
       )}

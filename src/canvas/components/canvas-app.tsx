@@ -112,15 +112,25 @@ const CanvasInner = () => {
     }
   }, []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
+  const tidyGraph = useCanvasStore((s) => s.tidyGraph);
 
   // Live preview inside the marketing-page iframe: read-only, no bridge, and
   // seeded with a curated demo flow instead of the visitor's saved canvas.
   const embedded = useMemo(() => isEmbedded(), []);
 
   useEffect(() => {
-    if (embedded) materializeFlow(DEMO_FLOW);
-  }, [embedded]);
+    if (!embedded) return;
+    materializeFlow(DEMO_FLOW);
+    // The demo is added after React Flow's initial (empty-graph) fitView, which
+    // doesn't re-fire on graph changes — so once the new nodes have mounted and
+    // measured, arrange and frame them (what the tidy button does manually).
+    const t = setTimeout(() => {
+      tidyGraph();
+      void fitView({ padding: 0.2, minZoom: 0.5, maxZoom: 1, duration: 300 });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [embedded, tidyGraph, fitView]);
 
   // Agents push flows and run requests through the local bridge; this
   // browser is where they materialize and execute. Signed-in only (the

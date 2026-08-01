@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -21,6 +21,7 @@ import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
 import { useAgentSync } from "../use-agent-sync";
 import { useSession } from "../../lib/auth-client";
+import { isEmbedded } from "../embedded";
 import { RequestNodeCard } from "./request-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
@@ -111,11 +112,14 @@ const CanvasInner = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { screenToFlowPosition } = useReactFlow();
 
+  // Live preview inside the marketing-page iframe: read-only, no bridge.
+  const embedded = useMemo(() => isEmbedded(), []);
+
   // Agents push flows and run requests through the local bridge; this
-  // browser is where they materialize and execute. Signed-in only — the
-  // bridge is account-scoped.
+  // browser is where they materialize and execute. Signed-in only (the
+  // bridge is account-scoped), and never from the embedded preview.
   const { data: session } = useSession();
-  useAgentSync(Boolean(session));
+  useAgentSync(!embedded && Boolean(session));
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => setSelectedNodeId(node.id),
@@ -242,7 +246,10 @@ const CanvasInner = () => {
             defaultViewport={graph.viewport ?? undefined}
             fitView={!graph.viewport}
             fitViewOptions={{ padding: 0.25, maxZoom: 1, minZoom: 0.65 }}
-            deleteKeyCode={["Backspace", "Delete"]}
+            deleteKeyCode={embedded ? null : ["Backspace", "Delete"]}
+            nodesDraggable={!embedded}
+            nodesConnectable={!embedded}
+            elementsSelectable={!embedded}
             minZoom={0.15}
             maxZoom={2}
             proOptions={{ hideAttribution: true }}

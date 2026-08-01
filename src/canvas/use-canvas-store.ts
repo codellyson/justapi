@@ -1,7 +1,8 @@
 "use client";
 
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
+import { isEmbedded } from "./embedded";
 import {
   applyNodeChanges,
   applyEdgeChanges,
@@ -473,6 +474,17 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: "justapi-canvas",
+      // In the iframe embed, read the saved canvas but drop every write, so a
+      // visitor poking at the live preview can't mutate their real data.
+      storage: createJSONStorage(() =>
+        isEmbedded()
+          ? {
+              getItem: (k) => localStorage.getItem(k),
+              setItem: () => {},
+              removeItem: () => {},
+            }
+          : localStorage
+      ),
       version: 3,
       migrate: (persisted, version) => {
         const state = persisted as Pick<CanvasState, "graphs" | "activeGraphId">;

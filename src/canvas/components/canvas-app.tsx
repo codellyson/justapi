@@ -22,6 +22,8 @@ import { loadSharedSnapshot } from "../share";
 import { useAgentSync } from "../use-agent-sync";
 import { useSession } from "../../lib/auth-client";
 import { isEmbedded } from "../embedded";
+import { materializeFlow } from "../materialize";
+import { DEMO_FLOW } from "../demo-flow";
 import { RequestNodeCard } from "./request-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
@@ -112,8 +114,13 @@ const CanvasInner = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const { screenToFlowPosition } = useReactFlow();
 
-  // Live preview inside the marketing-page iframe: read-only, no bridge.
+  // Live preview inside the marketing-page iframe: read-only, no bridge, and
+  // seeded with a curated demo flow instead of the visitor's saved canvas.
   const embedded = useMemo(() => isEmbedded(), []);
+
+  useEffect(() => {
+    if (embedded) materializeFlow(DEMO_FLOW);
+  }, [embedded]);
 
   // Agents push flows and run requests through the local bridge; this
   // browser is where they materialize and execute. Signed-in only (the

@@ -474,12 +474,13 @@ export const useCanvasStore = create<CanvasState>()(
     }),
     {
       name: "justapi-canvas",
-      // In the iframe embed, read the saved canvas but drop every write, so a
-      // visitor poking at the live preview can't mutate their real data.
+      // In the iframe embed the canvas is a curated, read-only preview: ignore
+      // the visitor's saved data entirely (getItem → null) and drop every write,
+      // so it always renders the demo flow and can't touch real data.
       storage: createJSONStorage(() =>
         isEmbedded()
           ? {
-              getItem: (k) => localStorage.getItem(k),
+              getItem: () => null,
               setItem: () => {},
               removeItem: () => {},
             }

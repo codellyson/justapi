@@ -155,32 +155,93 @@ const CanvasInner = () => {
     return () => clearTimeout(t);
   }, [graph.id, embedded, applyViewport, fitView]);
 
-  // Follow the run: as each node starts executing, pan the camera to it so the
-  // human watches the flow move through the tree. Keeps the current zoom (pans,
-  // doesn't zoom) and only re-centers on a node it hasn't followed yet.
-  const runs = useRunStore((s) => s.runs);
-  const followedRef = useRef<string | null>(null);
+  // Follow the run: pan the camera node-by-node as the flow executes, so the
+  // human watches it move through the tree. Subscribing to the run store (vs a
+  // React effect on `runs`) catches every pending transition even when requests
+  // finish faster than React re-renders; a paced queue dwells on each node so a
+  // fast flow doesn't skip straight to the last one. Only request nodes are
+  // followed — the origin stays pending for the whole flow. Pans, never zooms.
   useEffect(() => {
     if (embedded) return;
-    const pending = graph.nodes.filter(
-      (n) => runs[n.id]?.status === "pending"
-    );
-    if (pending.length === 0) {
-      followedRef.current = null;
-      return;
-    }
-    const target =
-      pending.find((n) => n.id !== followedRef.current) ??
-      pending[pending.length - 1];
-    if (target.id === followedRef.current) return;
-    followedRef.current = target.id;
-    const w = target.measured?.width ?? target.width ?? 320;
-    const h = target.measured?.height ?? target.height ?? 120;
-    void setCenter(target.position.x + w / 2, target.position.y + h / 2, {
-      zoom: getZoom(),
-      duration: 500,
+    const queue: string[] = [];
+    const seen = new Set<string>();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let runActive = false;
+    // Captured once per run so rapid pans never read a mid-animation zoom and
+    // drift the camera; we only pan, so the zoom stays exactly where it started.
+    let runZoom = 1;
+
+    const centerOn = (id: string) => {
+      const n = useCanvasStore
+        .getState()
+        .graphs[graph.id]?.nodes.find((x) => x.id === id);
+      if (!n) return;
+      const w = n.measured?.width ?? n.width ?? 320;
+      const h = n.measured?.height ?? n.height ?? 120;
+      void setCenter(n.position.x + w / 2, n.position.y + h / 2, {
+        zoom: runZoom,
+        duration: 350,
+      });
+    };
+
+    const advance = () => {
+      const id = queue.shift();
+      if (!id) {
+        timer = null;
+        return;
+      }
+      centerOn(id);
+      timer = setTimeout(advance, 550);
+    };
+
+    let prev = useRunStore.getState().runs;
+    const unsub = useRunStore.subscribe((state) => {
+      const next = state.runs;
+      const anyPending = Object.values(next).some((r) => r.status === "pending");
+      if (anyPending && !runActive) {
+        // A fresh run started — reset the walk and lock in a comfortable zoom
+        // (so the movement is visible even from a zoomed-out view).
+        runActive = true;
+        seen.clear();
+        queue.length = 0;
+        runZoom = Math.min(Math.max(getZoom(), 0.8), 1.4);
+        // Begin at the origin so a whole-flow run always pans back to the top
+        // of the tree first. Only runFlow marks the origin pending — a single
+        // node run won't, and shouldn't jump to the origin.
+        const origin = useCanvasStore
+          .getState()
+          .graphs[graph.id]?.nodes.find((n) => n.type === "collection");
+        if (origin && next[origin.id]?.status === "pending") {
+          seen.add(origin.id);
+          queue.push(origin.id);
+          if (!timer) advance();
+        }
+      }
+      for (const id in next) {
+        if (
+          next[id]?.status === "pending" &&
+          prev[id]?.status !== "pending" &&
+          !seen.has(id)
+        ) {
+          const node = useCanvasStore
+            .getState()
+            .graphs[graph.id]?.nodes.find((n) => n.id === id);
+          if (node?.type === "request") {
+            seen.add(id);
+            queue.push(id);
+            if (!timer) advance();
+          }
+        }
+      }
+      if (!anyPending) runActive = false;
+      prev = next;
     });
-  }, [runs, graph.nodes, embedded, setCenter, getZoom]);
+
+    return () => {
+      unsub();
+      if (timer) clearTimeout(timer);
+    };
+  }, [graph.id, embedded, setCenter, getZoom]);
 
   // Agents push flows and run requests through the local bridge; this
   // browser is where they materialize and execute. Signed-in only (the

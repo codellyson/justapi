@@ -198,33 +198,38 @@ const CanvasInner = () => {
 
   return (
     <div className="justapi-canvas flex h-[100dvh] w-full flex-col bg-bg text-primary">
-      {/* main row: rail · docked pane · canvas · docked drawer */}
+      {/* main row: rail · docked pane · canvas · docked drawer.
+          The embed hides all chrome and shows only the canvas. */}
       <div className="flex min-h-0 flex-1">
-        <Rail
-          libraryOpen={leftPane === "collections"}
-          onToggleLibrary={() => togglePane("collections")}
-          onOpenImport={() => setImportOpen(true)}
-          specOpen={specOpen}
-          onToggleSpec={() => setSpecOpen((o) => !o)}
-          canvasesOpen={leftPane === "canvases"}
-          onToggleCanvases={() => togglePane("canvases")}
-          snippetsOpen={leftPane === "snippets"}
-          onToggleSnippets={() => togglePane("snippets")}
-          themeOpen={leftPane === "theme"}
-          onToggleTheme={() => togglePane("theme")}
-          onStartTour={() => setTourSignal((n) => n + 1)}
-        />
-        <div
-          className={cn(
-            "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
-            leftPane ? "w-60" : "w-0"
-          )}
-        >
-          {displayedPane === "collections" && <CollectionsPane />}
-          {displayedPane === "canvases" && <CanvasPane />}
-          {displayedPane === "snippets" && <SnippetsPane />}
-          {displayedPane === "theme" && <ThemePane />}
-        </div>
+        {!embedded && (
+          <>
+            <Rail
+              libraryOpen={leftPane === "collections"}
+              onToggleLibrary={() => togglePane("collections")}
+              onOpenImport={() => setImportOpen(true)}
+              specOpen={specOpen}
+              onToggleSpec={() => setSpecOpen((o) => !o)}
+              canvasesOpen={leftPane === "canvases"}
+              onToggleCanvases={() => togglePane("canvases")}
+              snippetsOpen={leftPane === "snippets"}
+              onToggleSnippets={() => togglePane("snippets")}
+              themeOpen={leftPane === "theme"}
+              onToggleTheme={() => togglePane("theme")}
+              onStartTour={() => setTourSignal((n) => n + 1)}
+            />
+            <div
+              className={cn(
+                "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
+                leftPane ? "w-60" : "w-0"
+              )}
+            >
+              {displayedPane === "collections" && <CollectionsPane />}
+              {displayedPane === "canvases" && <CanvasPane />}
+              {displayedPane === "snippets" && <SnippetsPane />}
+              {displayedPane === "theme" && <ThemePane />}
+            </div>
+          </>
+        )}
 
         <div className="relative min-w-0 flex-1">
           <ReactFlow
@@ -257,26 +262,30 @@ const CanvasInner = () => {
             <Background variant={BackgroundVariant.Dots} gap={30} size={1} />
           </ReactFlow>
 
-          <ControlCluster />
-          {graph.nodes.length === 0 && (
+          {!embedded && <ControlCluster />}
+          {!embedded && graph.nodes.length === 0 && (
             <EmptyState onOpenImport={() => setImportOpen(true)} />
           )}
         </div>
 
-        <div
-          className={cn(
-            "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
-            specOpen ? "w-[380px]" : "w-0"
-          )}
-        >
-          {specMounted && <SpecDrawer onClose={() => setSpecOpen(false)} />}
-        </div>
+        {!embedded && (
+          <div
+            className={cn(
+              "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
+              specOpen ? "w-[380px]" : "w-0"
+            )}
+          >
+            {specMounted && <SpecDrawer onClose={() => setSpecOpen(false)} />}
+          </div>
+        )}
       </div>
 
-      <StatusBar />
+      {!embedded && <StatusBar />}
 
-      {importOpen && <ImportDialog onClose={() => setImportOpen(false)} />}
-      <Tour startSignal={tourSignal} />
+      {!embedded && importOpen && (
+        <ImportDialog onClose={() => setImportOpen(false)} />
+      )}
+      {!embedded && <Tour startSignal={tourSignal} />}
     </div>
   );
 };

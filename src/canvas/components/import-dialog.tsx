@@ -2,15 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useReactFlow } from "@xyflow/react";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { smartParse } from "../parse-curl";
 import { parseHar } from "../../utils/har";
-import {
-  parseOpenApi,
-  discoverSpecUrl,
-  commonSpecPaths,
-} from "../parse-openapi";
+import { parseOpenApi, type OpenApiEndpoint } from "../parse-openapi";
+import { discoverSpec } from "../discover-spec";
 import { emptySnapshot, useCanvasStore } from "../use-canvas-store";
 import { gridPositions } from "../layout";
 import { MethodPill } from "./method-pill";
@@ -19,7 +16,13 @@ import type { CardRequestSnapshot } from "../types";
 interface Candidate {
   name: string;
   snapshot: CardRequestSnapshot;
+  tag?: string | null;
 }
+
+// Adding hundreds of nodes at once freezes React Flow — cap a single import so
+// large specs are brought in a resource-group (tag) at a time.
+const MAX_ADD = 80;
+const MAX_ROWS = 150;
 
 const pathOf = (url: string): string => {
   try {
@@ -30,31 +33,32 @@ const pathOf = (url: string): string => {
   }
 };
 
+const endpointToCandidate = (ep: OpenApiEndpoint): Candidate => ({
+  name: ep.name,
+  tag: ep.tag,
+  snapshot: emptySnapshot({
+    method: ep.method,
+    url: ep.url,
+    urlRaw: ep.url,
+    headers: ep.headers,
+    body: ep.body,
+    bodyType: ep.bodyType,
+    authType: ep.authType,
+    authConfig: ep.authConfig,
+  }),
+});
+
 /**
  * Detect and parse pasted content into request candidates:
- * OpenAPI JSON → endpoints; HAR → captured requests; otherwise split into
- * blocks and `smartParse` each (cURL / copy-as-fetch / "GET url" lines).
+ * OpenAPI (JSON/YAML) → endpoints; HAR → captured requests; otherwise split
+ * into blocks and `smartParse` each (cURL / copy-as-fetch / "GET url" lines).
  */
 const parseInput = (raw: string): Candidate[] => {
   const text = raw.trim();
   if (!text) return [];
 
   const openapi = parseOpenApi(text);
-  if (openapi) {
-    return openapi.map((ep) => ({
-      name: ep.name,
-      snapshot: emptySnapshot({
-        method: ep.method,
-        url: ep.url,
-        urlRaw: ep.url,
-        headers: ep.headers,
-        body: ep.body,
-        bodyType: ep.bodyType,
-        authType: ep.authType,
-        authConfig: ep.authConfig,
-      }),
-    }));
-  }
+  if (openapi) return openapi.map(endpointToCandidate);
 
   // HAR?
   if (text.startsWith("{")) {
@@ -133,81 +137,95 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
   const addRequestNodes = useCanvasStore((s) => s.addRequestNodes);
 
   const [raw, setRaw] = useState("");
-  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [authHeader, setAuthHeader] = useState("");
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [authHeader, setAuthHeader] = useState("");
+  const [fetched, setFetched] = useState<Candidate[] | null>(null);
+  const [search, setSearch] = useState("");
+  const [tag, setTag] = useState<string | null>(null);
+  const [excluded, setExcluded] = useState<Set<number>>(new Set());
 
-  const candidates = useMemo(() => parseInput(raw), [raw]);
-  const selected = candidates.filter((_, i) => !excluded.has(i));
+  const parsed = useMemo(() => parseInput(raw), [raw]);
+  const candidates = fetched ?? parsed;
 
   const trimmed = raw.trim();
   const isSpecUrl =
     /^https?:\/\/\S+$/i.test(trimmed) && !trimmed.includes("\n");
 
-  // GET a URL through the proxy (bypasses CORS); returns the body as text.
-  // Carries an Authorization header when given, so protected specs can be read.
-  const fetchText = async (u: string): Promise<string | null> => {
-    const token = authHeader.trim();
-    const headers = token
-      ? { Authorization: /^(bearer|basic) /i.test(token) ? token : `Bearer ${token}` }
-      : undefined;
-    try {
-      const res = await fetch("/api/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: u, method: "GET", headers }),
-      });
-      const json = (await res.json()) as { status?: number; data?: unknown };
-      if (!json || json.status === 0 || json.data == null) return null;
-      return typeof json.data === "string"
-        ? json.data
-        : JSON.stringify(json.data, null, 2);
-    } catch {
-      return null;
-    }
+  const tags = useMemo(() => {
+    const t = new Set<string>();
+    for (const c of candidates) if (c.tag) t.add(c.tag);
+    return [...t].sort();
+  }, [candidates]);
+
+  const q = search.trim().toLowerCase();
+  const filtered = useMemo(
+    () =>
+      candidates
+        .map((c, i) => ({ c, i }))
+        .filter(
+          ({ c }) =>
+            (!tag || c.tag === tag) &&
+            (!q ||
+              c.snapshot.urlRaw.toLowerCase().includes(q) ||
+              c.name.toLowerCase().includes(q) ||
+              c.snapshot.method.toLowerCase().includes(q))
+        ),
+    [candidates, tag, q]
+  );
+  const picks = filtered.filter(({ i }) => !excluded.has(i));
+
+  const resetInput = (value: string) => {
+    setRaw(value);
+    setFetched(null);
+    setExcluded(new Set());
+    setFetchError(null);
+    setSearch("");
+    setTag(null);
   };
 
-  // Accepts a raw spec URL OR a Swagger UI / Redoc page: fetch it, and if it's
-  // an HTML page, discover the spec URL it points at (or probe common paths).
   const fetchSpec = async () => {
     setFetching(true);
     setFetchError(null);
-    try {
-      const first = await fetchText(trimmed);
-      if (first && parseOpenApi(first)) return setRaw(first);
-
-      const tried = new Set<string>([trimmed]);
-      const queue: string[] = [];
-      if (first) {
-        const advertised = discoverSpecUrl(first, trimmed);
-        if (advertised) queue.push(advertised);
-      }
-      queue.push(...commonSpecPaths(trimmed));
-
-      for (const u of queue) {
-        if (tried.has(u)) continue;
-        tried.add(u);
-        const text = await fetchText(u);
-        if (text && parseOpenApi(text)) return setRaw(text);
-      }
-      throw new Error("couldn't find an OpenAPI spec at that URL");
-    } catch (e) {
-      setFetchError(e instanceof Error ? e.message : "fetch failed");
-    } finally {
-      setFetching(false);
+    const tok = authHeader.trim();
+    const auth = tok
+      ? /^(bearer|basic|apikey)\s/i.test(tok)
+        ? tok
+        : `Bearer ${tok}`
+      : undefined;
+    const result = await discoverSpec(trimmed, auth);
+    setFetching(false);
+    if ("error" in result) {
+      setFetchError(result.error);
+      return;
     }
+    setSearch("");
+    setTag(null);
+    // Large specs start with nothing selected — pick a tag, then select all.
+    setExcluded(
+      result.endpoints.length > 40
+        ? new Set(result.endpoints.map((_, i) => i))
+        : new Set()
+    );
+    setFetched(result.endpoints.map(endpointToCandidate));
   };
 
+  const setFilteredExcluded = (exclude: boolean) =>
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      for (const { i } of filtered) exclude ? next.add(i) : next.delete(i);
+      return next;
+    });
+
   const fanOut = () => {
-    if (selected.length === 0) return;
+    if (!picks.length || picks.length > MAX_ADD) return;
     const origin = screenToFlowPosition({
       x: window.innerWidth / 2,
       y: window.innerHeight / 2,
     });
-    const positions = gridPositions(selected.length, origin);
+    const positions = gridPositions(picks.length, origin);
     addRequestNodes(
-      selected.map((c, i) => ({
+      picks.map(({ c }, i) => ({
         position: positions[i],
         snapshot: c.snapshot,
         name: c.name,
@@ -216,45 +234,49 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     onClose();
   };
 
+  const tooMany = picks.length > MAX_ADD;
+  const input =
+    "rounded-md border border-border/50 bg-bg px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70";
+
   return (
     <div
       className="absolute inset-0 z-40 flex items-center justify-center bg-bg/60 backdrop-blur-[2px]"
       onClick={onClose}
     >
       <div
-        className="w-[520px] max-w-[calc(100vw-32px)] max-h-[80vh] flex flex-col rounded-xl border border-border/60 bg-bg-secondary/95 backdrop-blur-sm shadow-[0_16px_40px_-16px_rgba(0,0,0,0.5)] font-sans"
+        className="flex max-h-[82vh] w-[560px] max-w-[calc(100vw-32px)] flex-col rounded-xl border border-border/60 bg-bg-secondary/95 font-sans shadow-[0_16px_40px_-16px_rgba(0,0,0,0.5)] backdrop-blur-sm"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
+        <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
           <span className="text-[12px] text-muted">
-            import — curl · fetch · HAR · OpenAPI (JSON/YAML) · URL
+            import — curl · fetch · HAR · OpenAPI (JSON/YAML) · Swagger URL
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded text-muted hover:text-primary"
+            className="rounded p-1 text-muted hover:text-primary"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
         <textarea
-          className="m-3 h-36 shrink-0 resize-none font-mono rounded-md border border-border/50 bg-bg px-2.5 py-2 text-[13px] outline-none focus:border-accent/60 placeholder:text-muted/70"
+          className="m-3 h-28 shrink-0 resize-none rounded-md border border-border/50 bg-bg px-2.5 py-2 font-mono text-[13px] outline-none focus:border-accent/60 placeholder:text-muted/70"
           placeholder={`curl · fetch · HAR · OpenAPI (JSON or YAML) — or paste a Swagger UI / spec URL to fetch\n\ne.g. https://petstore3.swagger.io`}
           value={raw}
-          onChange={(e) => setRaw(e.target.value)}
+          onChange={(e) => resetInput(e.target.value)}
           autoFocus
           spellCheck={false}
         />
 
-        {isSpecUrl && candidates.length === 0 && (
+        {isSpecUrl && !fetched && (
           <div className="space-y-1.5 px-3 pb-1">
             <input
               type="text"
               value={authHeader}
               onChange={(e) => setAuthHeader(e.target.value)}
-              placeholder="Authorization for a protected spec (optional) — e.g. Bearer <token>"
-              className="w-full rounded-md border border-border/50 bg-bg px-2.5 py-1.5 font-mono text-[12px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70"
+              placeholder="Authorization for a protected spec (optional) — e.g. Bearer <token> or Basic <…>"
+              className={cn(input, "w-full font-mono")}
               spellCheck={false}
             />
             <button
@@ -265,68 +287,140 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
             >
               {fetching ? "Fetching…" : "Fetch spec from URL"}
             </button>
-            {fetchError && (
-              <p className="text-[12px] text-danger">{fetchError}</p>
-            )}
+            {fetchError && <p className="text-[12px] text-danger">{fetchError}</p>}
           </div>
         )}
 
         {candidates.length > 0 && (
-          <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-1">
-            {candidates.map((c, i) => {
-              const off = excluded.has(i);
-              return (
+          <>
+            <div className="flex flex-wrap items-center gap-1.5 px-3 pb-2">
+              <div className="relative flex-1 min-w-[160px]">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="filter by path or name…"
+                  className={cn(input, "w-full pl-7")}
+                  spellCheck={false}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setFilteredExcluded(false)}
+                className="rounded-md border border-border/50 px-2 py-1 text-[12px] text-secondary hover:text-primary"
+              >
+                all
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilteredExcluded(true)}
+                className="rounded-md border border-border/50 px-2 py-1 text-[12px] text-secondary hover:text-primary"
+              >
+                none
+              </button>
+            </div>
+
+            {tags.length > 0 && (
+              <div className="mb-1 flex max-h-[64px] flex-wrap gap-1 overflow-y-auto px-3">
                 <button
-                  key={i}
                   type="button"
-                  onClick={() =>
-                    setExcluded((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(i)) next.delete(i);
-                      else next.add(i);
-                      return next;
-                    })
-                  }
+                  onClick={() => setTag(null)}
                   className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1 rounded-md border text-left transition-colors",
-                    off
-                      ? "border-border/30 opacity-40"
-                      : "border-border/50 hover:border-accent/50"
+                    "rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                    tag === null
+                      ? "border-accent/60 bg-accent/10 text-accent"
+                      : "border-border/50 text-muted hover:text-secondary"
                   )}
                 >
-                  <MethodPill method={c.snapshot.method} className="text-[12px]" />
-                  <span className="flex-1 min-w-0 truncate font-mono text-[13px] text-primary">
-                    {c.snapshot.urlRaw}
-                  </span>
-                  <span className="shrink-0 text-[12px] text-muted truncate max-w-[120px]">
-                    {c.name}
-                  </span>
+                  all
                 </button>
-              );
-            })}
-          </div>
+                {tags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setTag(t === tag ? null : t)}
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[11px] transition-colors",
+                      t === tag
+                        ? "border-accent/60 bg-accent/10 text-accent"
+                        : "border-border/50 text-muted hover:text-secondary"
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3">
+              {filtered.slice(0, MAX_ROWS).map(({ c, i }) => {
+                const off = excluded.has(i);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() =>
+                      setExcluded((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(i)) next.delete(i);
+                        else next.add(i);
+                        return next;
+                      })
+                    }
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md border px-2 py-1 text-left transition-colors",
+                      off
+                        ? "border-border/30 opacity-40"
+                        : "border-border/50 hover:border-accent/50"
+                    )}
+                  >
+                    <MethodPill method={c.snapshot.method} className="text-[12px]" />
+                    <span className="min-w-0 flex-1 truncate font-mono text-[13px] text-primary">
+                      {pathOf(c.snapshot.urlRaw)}
+                    </span>
+                    <span className="max-w-[140px] shrink-0 truncate text-[12px] text-muted">
+                      {c.tag || c.name}
+                    </span>
+                  </button>
+                );
+              })}
+              {filtered.length > MAX_ROWS && (
+                <p className="py-1 text-center text-[12px] text-muted">
+                  +{filtered.length - MAX_ROWS} more — filter or pick a tag to
+                  narrow
+                </p>
+              )}
+            </div>
+          </>
         )}
 
-        <div className="flex items-center justify-between px-3 py-2.5 border-t border-border/40 mt-3">
+        <div className="mt-2 flex items-center justify-between border-t border-border/40 px-3 py-2.5">
           <span className="text-[12px] text-muted">
-            {raw.trim()
-              ? `${selected.length} of ${candidates.length} selected`
+            {candidates.length > 0
+              ? `${picks.length} selected of ${filtered.length} shown`
               : ""}
           </span>
-          <button
-            type="button"
-            onClick={fanOut}
-            disabled={selected.length === 0}
-            className={cn(
-              "px-3 py-1 rounded-md text-[13px] font-semibold transition-colors",
-              selected.length > 0
-                ? "bg-accent text-accent-text hover:bg-accent-hover"
-                : "bg-bg text-muted cursor-not-allowed"
+          <div className="flex items-center gap-2">
+            {tooMany && (
+              <span className="text-[12px] text-warning">
+                narrow to ≤{MAX_ADD}
+              </span>
             )}
-          >
-            add {selected.length > 0 ? selected.length : ""} node
-            {selected.length === 1 ? "" : "s"}
-          </button>
+            <button
+              type="button"
+              onClick={fanOut}
+              disabled={picks.length === 0 || tooMany}
+              className={cn(
+                "rounded-md px-3 py-1 text-[13px] font-semibold transition-colors",
+                picks.length > 0 && !tooMany
+                  ? "bg-accent text-accent-text hover:bg-accent-hover"
+                  : "bg-bg text-muted cursor-not-allowed"
+              )}
+            >
+              add {picks.length || ""} node{picks.length === 1 ? "" : "s"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

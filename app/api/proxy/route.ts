@@ -108,15 +108,27 @@ export async function POST(request: NextRequest) {
         : [];
 
     const contentType = response.headers.get("content-type") || "";
+    const ct = contentType.toLowerCase();
     let data: unknown;
 
-    if (contentType.includes("application/json")) {
+    if (ct.includes("application/json") || ct.includes("+json")) {
       try {
         data = await response.json();
       } catch {
         data = await response.text();
       }
-    } else if (contentType.includes("text/")) {
+    } else if (
+      ct.includes("text/") ||
+      ct.includes("javascript") ||
+      ct.includes("ecmascript") ||
+      ct.includes("xml") ||
+      ct.includes("yaml") ||
+      ct.includes("csv") ||
+      ct.includes("charset")
+    ) {
+      // Includes application/javascript (Swagger UI's swagger-ui-init.js embeds
+      // the spec) and other text-ish payloads that would otherwise be lost as a
+      // {}-serialized ArrayBuffer.
       data = await response.text();
     } else {
       const blob = await response.blob();

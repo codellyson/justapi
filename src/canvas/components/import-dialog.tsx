@@ -6,7 +6,11 @@ import { X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { smartParse } from "../parse-curl";
 import { parseHar } from "../../utils/har";
-import { parseOpenApi } from "../parse-openapi";
+import {
+  parseOpenApi,
+  discoverSpecUrl,
+  commonSpecPaths,
+} from "../parse-openapi";
 import { emptySnapshot, useCanvasStore } from "../use-canvas-store";
 import { gridPositions } from "../layout";
 import { MethodPill } from "./method-pill";
@@ -39,7 +43,16 @@ const parseInput = (raw: string): Candidate[] => {
   if (openapi) {
     return openapi.map((ep) => ({
       name: ep.name,
-      snapshot: emptySnapshot({ method: ep.method, url: ep.url, urlRaw: ep.url }),
+      snapshot: emptySnapshot({
+        method: ep.method,
+        url: ep.url,
+        urlRaw: ep.url,
+        headers: ep.headers,
+        body: ep.body,
+        bodyType: ep.bodyType,
+        authType: ep.authType,
+        authConfig: ep.authConfig,
+      }),
     }));
   }
 
@@ -121,9 +134,70 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
 
   const [raw, setRaw] = useState("");
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [fetching, setFetching] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [authHeader, setAuthHeader] = useState("");
 
   const candidates = useMemo(() => parseInput(raw), [raw]);
   const selected = candidates.filter((_, i) => !excluded.has(i));
+
+  const trimmed = raw.trim();
+  const isSpecUrl =
+    /^https?:\/\/\S+$/i.test(trimmed) && !trimmed.includes("\n");
+
+  // GET a URL through the proxy (bypasses CORS); returns the body as text.
+  // Carries an Authorization header when given, so protected specs can be read.
+  const fetchText = async (u: string): Promise<string | null> => {
+    const token = authHeader.trim();
+    const headers = token
+      ? { Authorization: /^(bearer|basic) /i.test(token) ? token : `Bearer ${token}` }
+      : undefined;
+    try {
+      const res = await fetch("/api/proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: u, method: "GET", headers }),
+      });
+      const json = (await res.json()) as { status?: number; data?: unknown };
+      if (!json || json.status === 0 || json.data == null) return null;
+      return typeof json.data === "string"
+        ? json.data
+        : JSON.stringify(json.data, null, 2);
+    } catch {
+      return null;
+    }
+  };
+
+  // Accepts a raw spec URL OR a Swagger UI / Redoc page: fetch it, and if it's
+  // an HTML page, discover the spec URL it points at (or probe common paths).
+  const fetchSpec = async () => {
+    setFetching(true);
+    setFetchError(null);
+    try {
+      const first = await fetchText(trimmed);
+      if (first && parseOpenApi(first)) return setRaw(first);
+
+      const tried = new Set<string>([trimmed]);
+      const queue: string[] = [];
+      if (first) {
+        const advertised = discoverSpecUrl(first, trimmed);
+        if (advertised) queue.push(advertised);
+      }
+      queue.push(...commonSpecPaths(trimmed));
+
+      for (const u of queue) {
+        if (tried.has(u)) continue;
+        tried.add(u);
+        const text = await fetchText(u);
+        if (text && parseOpenApi(text)) return setRaw(text);
+      }
+      throw new Error("couldn't find an OpenAPI spec at that URL");
+    } catch (e) {
+      setFetchError(e instanceof Error ? e.message : "fetch failed");
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const fanOut = () => {
     if (selected.length === 0) return;
@@ -153,7 +227,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
       >
         <div className="flex items-center justify-between px-3 py-2.5 border-b border-border/40">
           <span className="text-[12px] text-muted">
-            import — curl · fetch · HAR · OpenAPI json
+            import — curl · fetch · HAR · OpenAPI (JSON/YAML) · URL
           </span>
           <button
             type="button"
@@ -166,12 +240,36 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
 
         <textarea
           className="m-3 h-36 shrink-0 resize-none font-mono rounded-md border border-border/50 bg-bg px-2.5 py-2 text-[13px] outline-none focus:border-accent/60 placeholder:text-muted/70"
-          placeholder={`curl -H 'Authorization: Bearer {{token}}' https://api.example.com/users\n\npaste one or many — blocks are split automatically`}
+          placeholder={`curl · fetch · HAR · OpenAPI (JSON or YAML) — or paste a Swagger UI / spec URL to fetch\n\ne.g. https://petstore3.swagger.io`}
           value={raw}
           onChange={(e) => setRaw(e.target.value)}
           autoFocus
           spellCheck={false}
         />
+
+        {isSpecUrl && candidates.length === 0 && (
+          <div className="space-y-1.5 px-3 pb-1">
+            <input
+              type="text"
+              value={authHeader}
+              onChange={(e) => setAuthHeader(e.target.value)}
+              placeholder="Authorization for a protected spec (optional) — e.g. Bearer <token>"
+              className="w-full rounded-md border border-border/50 bg-bg px-2.5 py-1.5 font-mono text-[12px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70"
+              spellCheck={false}
+            />
+            <button
+              type="button"
+              onClick={fetchSpec}
+              disabled={fetching}
+              className="w-full rounded-md border border-border/50 bg-bg px-3 py-2 text-[13px] font-semibold text-primary transition-colors hover:border-accent/60 disabled:opacity-60"
+            >
+              {fetching ? "Fetching…" : "Fetch spec from URL"}
+            </button>
+            {fetchError && (
+              <p className="text-[12px] text-danger">{fetchError}</p>
+            )}
+          </div>
+        )}
 
         {candidates.length > 0 && (
           <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-1">

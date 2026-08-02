@@ -341,8 +341,9 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
         </div>
 
         <textarea
-          className="m-3 h-28 shrink-0 resize-none rounded-md border border-border/50 bg-bg px-2.5 py-2 font-mono text-[13px] outline-none focus:border-accent/60 placeholder:text-muted/70"
-          placeholder={`curl · fetch · HAR · OpenAPI (JSON or YAML) — or paste a Swagger UI / spec URL to fetch\n\ne.g. https://petstore3.swagger.io`}
+          rows={Math.min(Math.max(raw.split("\n").length, 2), 10)}
+          className="m-3 shrink-0 resize-none rounded-md border border-border/50 bg-bg px-2.5 py-2 font-mono text-[13px] outline-none focus:border-accent/60 placeholder:text-muted/70"
+          placeholder="paste curl · fetch · HAR · OpenAPI (JSON/YAML) — or a Swagger/spec URL to fetch"
           value={raw}
           onChange={(e) => resetInput(e.target.value)}
           autoFocus

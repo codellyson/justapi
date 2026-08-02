@@ -12,7 +12,7 @@ import { emptySnapshot, useCanvasStore } from "../use-canvas-store";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { gridPositions } from "../layout";
 import { MethodPill } from "./method-pill";
-import type { CardRequestSnapshot } from "../types";
+import type { CardRequestSnapshot, CollectionNodeData } from "../types";
 
 interface Candidate {
   name: string;
@@ -147,8 +147,7 @@ interface ImportDialogProps {
 }
 
 export const ImportDialog = ({ onClose }: ImportDialogProps) => {
-  const { screenToFlowPosition } = useReactFlow();
-  const addRequestNodes = useCanvasStore((s) => s.addRequestNodes);
+  const { screenToFlowPosition, fitView } = useReactFlow();
 
   // Close only via the ✕ or Escape — never on a backdrop misclick, which loses
   // a fetched spec + selection.
@@ -169,6 +168,9 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
   const [tag, setTag] = useState<string | null>(null);
   const [server, setServer] = useState("");
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  // Destination for the batch. null = follow the smart default (a whole spec
+  // lands on its own canvas; a few loose requests merge into the current one).
+  const [dest, setDest] = useState<null | "new" | "current">(null);
 
   const parsed = useMemo(() => parseInput(raw), [raw]);
   const source = fetched ?? parsed;
@@ -179,6 +181,18 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
   const trimmed = raw.trim();
   const isSpecUrl =
     /^https?:\/\/\S+$/i.test(trimmed) && !trimmed.includes("\n");
+
+  // A fetched URL or a doc that declares servers is a whole API → default to a
+  // fresh canvas; ad-hoc pasted requests default to the current board.
+  const isSpec = Boolean(fetched) || servers.length > 0;
+  const effectiveDest: "new" | "current" = dest ?? (isSpec ? "new" : "current");
+  const hostName = (() => {
+    try {
+      return new URL(chosenServer || trimmed).host;
+    } catch {
+      return "imported";
+    }
+  })();
 
   const tags = useMemo(() => {
     const t = new Set<string>();
@@ -211,6 +225,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     setSearch("");
     setTag(null);
     setServer("");
+    setDest(null);
   };
 
   const fetchSpec = async () => {
@@ -268,16 +283,14 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
       return next;
     });
 
-  // Make a `{{base}}` environment for the chosen server and activate it, so the
-  // templated imported URLs resolve. Reuses an env that already has this base.
-  const activateBaseEnv = (base: string) => {
-    if (!base) return;
+  // Ensure a `{{base}}` environment exists for the chosen server and return its
+  // id — WITHOUT switching the global active env. The id is pinned to the
+  // destination origin instead, so importing one API never re-bases another.
+  const ensureBaseEnv = (base: string): string | null => {
+    if (!base) return null;
     const es = useEnvironmentStore.getState();
     const existing = es.environments.find((e) => e.variables.base === base);
-    if (existing) {
-      es.setActiveEnvironmentId(existing.id);
-      return;
-    }
+    if (existing) return existing.id;
     let name = "imported";
     try {
       name = new URL(base).host;
@@ -285,10 +298,11 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
       /* keep default */
     }
     es.addEnvironment({ name, variables: { base } });
-    const created = useEnvironmentStore
-      .getState()
-      .environments.find((e) => e.variables.base === base);
-    if (created) es.setActiveEnvironmentId(created.id);
+    return (
+      useEnvironmentStore
+        .getState()
+        .environments.find((e) => e.variables.base === base)?.id ?? null
+    );
   };
 
   // Drop the batch below existing content instead of on top of it.
@@ -312,15 +326,52 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
 
   const fanOut = () => {
     if (!picks.length || picks.length > MAX_ADD) return;
-    if (chosenServer) activateBaseEnv(chosenServer);
+    const cs = useCanvasStore.getState();
+    const envId = chosenServer ? ensureBaseEnv(chosenServer) : null;
+
+    if (effectiveDest === "new") cs.createGraph(hostName || "imported");
+
     const positions = gridPositions(picks.length, importAnchor());
-    addRequestNodes(
+    cs.addRequestNodes(
       picks.map(({ c }, i) => ({
         position: positions[i],
         snapshot: c.snapshot,
         name: c.name,
       }))
     );
+
+    // Pin the API's env (and its default auth) to the destination origin, so
+    // {{base}} resolves for this tree without touching the global active env.
+    const after = useCanvasStore.getState();
+    const g = after.graphs[after.activeGraphId];
+    const origin = g?.nodes.find((n) => n.type === "collection");
+    if (origin) {
+      const patch: Partial<CollectionNodeData> = {};
+      if (envId) patch.environmentId = envId;
+      const auth = picks.find(
+        ({ c }) => c.snapshot.authType && c.snapshot.authType !== "none"
+      )?.c.snapshot;
+      if (auth) {
+        patch.authType = auth.authType;
+        patch.authConfig = { ...auth.authConfig };
+      }
+      if (Object.keys(patch).length) cs.updateNodeData(origin.id, patch);
+    }
+
+    // A new canvas is framed by the graph-change effect; a merge into the
+    // current board isn't, so bring the fresh nodes into view here.
+    if (effectiveDest === "current") {
+      setTimeout(
+        () =>
+          void fitView({
+            padding: 0.2,
+            minZoom: 0.6,
+            maxZoom: 1,
+            duration: 300,
+          }),
+        60
+      );
+    }
     onClose();
   };
 
@@ -503,13 +554,36 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
           </>
         )}
 
+        {candidates.length > 0 && (
         <div className="mt-2 flex items-center justify-between border-t border-border/40 px-3 py-2.5">
           <span className="text-[12px] text-muted">
-            {candidates.length > 0
-              ? `${picks.length} selected of ${filtered.length} shown`
-              : ""}
+            {`${picks.length} selected of ${filtered.length} shown`}
           </span>
           <div className="flex items-center gap-2">
+            {candidates.length > 0 && (
+              <div className="flex overflow-hidden rounded-md border border-border/50 text-[11px]">
+                {(["new", "current"] as const).map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDest(d)}
+                    title={
+                      d === "new"
+                        ? "Add on a fresh canvas named after the API"
+                        : "Add to the canvas you're on now"
+                    }
+                    className={cn(
+                      "px-2 py-1 transition-colors",
+                      effectiveDest === d
+                        ? "bg-accent/15 text-accent"
+                        : "text-muted hover:text-secondary"
+                    )}
+                  >
+                    {d === "new" ? "new canvas" : "this canvas"}
+                  </button>
+                ))}
+              </div>
+            )}
             {tooMany && (
               <span className="text-[12px] text-warning">
                 narrow to ≤{MAX_ADD}
@@ -530,6 +604,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

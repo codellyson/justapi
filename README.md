@@ -92,7 +92,7 @@ other MCP clients. See [docs/agent-api.md](docs/agent-api.md).
 
 **Auth is optional.** Anonymous users get the full canvas locally — graphs live
 in their browser's localStorage. Signing in unlocks the account-scoped features:
-the agent bridge, sharing, token minting, and (later) remote sync.
+the agent bridge, sharing, token minting, and canvas sync across devices.
 
 `middleware.ts` only guards `/account`; everything else is open. The bridge
 routes (`/api/flows`, `/api/agent/*`, `/api/share/*`) call `requireAuth`, which
@@ -170,8 +170,25 @@ This sidesteps CORS for arbitrary endpoints.
 
 ## Persistence
 
-Graphs (nodes, edges, viewport) persist to localStorage (`justapi-canvas`) —
-canvas data is per-browser, not yet synced to the account. Responses are kept in
-memory only. Accounts, sessions, and API tokens persist to **D1**. Share links
-(`/app?s=ID`) resolve via `/api/share` (**R2**) and spawn a request node; legacy
-`/?s=ID` and `/playground?s=ID` links redirect to the canvas at `/app`.
+Graphs persist to localStorage (`justapi-canvas`) for a local-first, works-signed-out
+experience. **Signed-in, canvases + environments also sync to D1 per user**
+(`src/canvas/use-canvas-sync.ts`): the server is the source of truth on load, a
+canvas the server lacks is either uploaded (never-synced local work) or dropped
+(deleted on another device — tracked via a local `justapi-synced-ids` set so a
+delete doesn't resurrect). Responses are kept in memory only. Accounts, sessions,
+and API tokens persist to **D1**. Share links (`/app?s=ID`) resolve via
+`/api/share` (**R2**) and spawn a request node; legacy `/?s=ID` and
+`/playground?s=ID` links redirect to the canvas at `/app`.
+
+App tables (`canvas`, `environment`) live in `src/db/app-schema.ts` — **separate
+from `src/db/schema.ts`**, which `pnpm auth:generate` overwrites. After changing
+either, run `pnpm db:generate` then `pnpm db:migrate:local` (`--remote` for prod).
+
+### Plans & limits
+
+`src/server/plan.ts` defines per-plan limits; everyone is on **free (5 canvases)**
+until billing exists (`getUserPlan` is the seam to change). The cap blocks
+*creating* new canvases past the limit — existing canvases are grandfathered
+(bulk `POST /api/canvases/import` bypasses it; per-canvas `PUT` enforces it with a
+`402`). The client also gates creation (`createCanvasGuarded`) and the account
+page shows usage as `N / limit`.

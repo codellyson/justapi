@@ -15,7 +15,14 @@ import type { FlowSpec } from "./flow-spec";
  * The bridge is account-scoped, so it only connects when signed in —
  * anonymous users work locally and never open the (gated) SSE stream.
  */
-export const useAgentSync = (enabled: boolean): void => {
+/**
+ * @param enabled   connect to the agent bridge (signed-in, non-embedded).
+ * @param rehydrate re-materialize hub flows the board hasn't seen on connect.
+ *   Off when canvas persistence is active — that restores every board from D1,
+ *   and letting both run spawns duplicate canvases (each materialize mints a new
+ *   canvas id, which the id-keyed sync can't dedupe).
+ */
+export const useAgentSync = (enabled: boolean, rehydrate = true): void => {
   useEffect(() => {
     if (!enabled) return;
 
@@ -71,6 +78,9 @@ export const useAgentSync = (enabled: boolean): void => {
       });
 
       source.addEventListener("connected", (e) => {
+        // Canvas persistence restores boards from D1 — skip hub rehydration so
+        // the two don't each re-create the same flow as separate canvases.
+        if (!rehydrate) return;
         // Rehydrate flows persisted server-side that this board hasn't
         // seen (fresh profile, cleared storage, …).
         try {
@@ -105,5 +115,5 @@ export const useAgentSync = (enabled: boolean): void => {
       if (retry) clearTimeout(retry);
       source?.close();
     };
-  }, [enabled]);
+  }, [enabled, rehydrate]);
 };

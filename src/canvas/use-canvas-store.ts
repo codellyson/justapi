@@ -135,6 +135,12 @@ interface CanvasState {
   /** Auto-arrange the active graph into a layered tree. */
   tidyGraph: () => void;
   setActiveGraph: (id: string) => void;
+  /** Replace every graph wholesale — server hydration. Keeps the active graph
+   *  if it still exists, else falls back to the first (or a fresh one). */
+  setGraphs: (
+    graphs: Record<string, CanvasGraph>,
+    activeGraphId?: string
+  ) => void;
 
   onNodesChange: (changes: NodeChange<CanvasNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<BindingEdge>[]) => void;
@@ -236,6 +242,19 @@ export const useCanvasStore = create<CanvasState>()(
         ),
       setActiveGraph: (id) =>
         set((s) => (s.graphs[id] ? { activeGraphId: id, inspectedEdgeId: null } : {})),
+      setGraphs: (graphs, activeGraphId) =>
+        set((s) => {
+          const ids = Object.keys(graphs);
+          if (ids.length === 0) {
+            const g = makeGraph("main");
+            return { graphs: { [g.id]: g }, activeGraphId: g.id };
+          }
+          const next =
+            (activeGraphId && graphs[activeGraphId] && activeGraphId) ||
+            (graphs[s.activeGraphId] && s.activeGraphId) ||
+            ids[0];
+          return { graphs, activeGraphId: next, inspectedEdgeId: null };
+        }),
 
       onNodesChange: (changes) =>
         set((s) =>

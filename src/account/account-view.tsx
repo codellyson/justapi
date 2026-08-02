@@ -76,6 +76,7 @@ export const AccountView = ({
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user;
+  const userId = user?.id;
 
   const [keys, setKeys] = useState<KeyRow[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
@@ -93,6 +94,10 @@ export const AccountView = ({
     assertions: number;
     environments: number;
   } | null>(null);
+  const [planInfo, setPlanInfo] = useState<{
+    plan: string;
+    canvasLimit: number;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     const [keyRes, acctRes] = await Promise.all([
@@ -109,48 +114,86 @@ export const AccountView = ({
     void refresh();
   }, [refresh]);
 
-  // Workspace counts come from the browser's local canvas store — read directly
-  // (not via the zustand store) to keep React Flow out of this route's bundle,
-  // and only on the client to avoid an SSR/hydration mismatch. These are
-  // device-local until per-account remote persistence lands.
+  // Workspace usage: server-authoritative when signed in (the account-level
+  // numbers a plan is metered against), falling back to this device's local
+  // store when signed out.
   useEffect(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem("justapi-canvas") || "null");
-      const graphs = (parsed?.state?.graphs ?? {}) as Record<
-        string,
-        { nodes?: { type?: string }[] }
-      >;
-      let collections = 0;
-      let requests = 0;
-      let assertions = 0;
-      for (const g of Object.values(graphs)) {
-        for (const n of g.nodes ?? []) {
-          if (n.type === "collection") collections++;
-          else if (n.type === "request") requests++;
-          else if (n.type === "assert") assertions++;
+    let cancelled = false;
+    const localStats = () => {
+      try {
+        const parsed = JSON.parse(
+          localStorage.getItem("justapi-canvas") || "null"
+        );
+        const graphs = (parsed?.state?.graphs ?? {}) as Record<
+          string,
+          { nodes?: { type?: string }[] }
+        >;
+        let collections = 0;
+        let requests = 0;
+        let assertions = 0;
+        for (const g of Object.values(graphs)) {
+          for (const n of g.nodes ?? []) {
+            if (n.type === "collection") collections++;
+            else if (n.type === "request") requests++;
+            else if (n.type === "assert") assertions++;
+          }
+        }
+        const envRaw = JSON.parse(
+          localStorage.getItem("justapi-environments") || "null"
+        );
+        return {
+          canvases: Object.keys(graphs).length,
+          collections,
+          requests,
+          assertions,
+          environments: (envRaw?.state?.environments ?? []).length,
+        };
+      } catch {
+        return {
+          canvases: 0,
+          collections: 0,
+          requests: 0,
+          assertions: 0,
+          environments: 0,
+        };
+      }
+    };
+
+    void (async () => {
+      if (userId) {
+        try {
+          const res = await fetch("/api/canvases");
+          if (res.ok) {
+            const b = (await res.json()) as {
+              usage: {
+                canvases: number;
+                collections: number;
+                requests: number;
+                assertions: number;
+                environments: number;
+              };
+              limits: { canvases: number };
+              plan: string;
+            };
+            if (!cancelled) {
+              setStats(b.usage);
+              setPlanInfo({ plan: b.plan, canvasLimit: b.limits.canvases });
+            }
+            return;
+          }
+        } catch {
+          /* fall through to local */
         }
       }
-      const envRaw = JSON.parse(
-        localStorage.getItem("justapi-environments") || "null"
-      );
-      const environments = (envRaw?.state?.environments ?? []).length;
-      setStats({
-        canvases: Object.keys(graphs).length,
-        collections,
-        requests,
-        assertions,
-        environments,
-      });
-    } catch {
-      setStats({
-        canvases: 0,
-        collections: 0,
-        requests: 0,
-        assertions: 0,
-        environments: 0,
-      });
-    }
-  }, []);
+      if (!cancelled) {
+        setStats(localStats());
+        setPlanInfo(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const mint = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,24 +336,40 @@ export const AccountView = ({
             Workspace
           </div>
           <p className="mb-3 text-[12px] text-muted">
-            Counted from this device. Per-account usage across devices starts
-            once remote sync is enabled.
+            {planInfo
+              ? `Synced to your account · ${planInfo.plan} plan.`
+              : "Counted from this device. Sign in to sync and meter usage across devices."}
           </p>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {(
               [
-                ["Canvases", stats?.canvases],
-                ["Collections", stats?.collections],
-                ["Requests", stats?.requests],
-                ["Assertions", stats?.assertions],
-                ["Environments", stats?.environments],
+                [
+                  "Canvases",
+                  stats
+                    ? planInfo
+                      ? `${stats.canvases} / ${planInfo.canvasLimit}`
+                      : stats.canvases
+                    : undefined,
+                  Boolean(
+                    planInfo && stats && stats.canvases >= planInfo.canvasLimit
+                  ),
+                ],
+                ["Collections", stats?.collections, false],
+                ["Requests", stats?.requests, false],
+                ["Assertions", stats?.assertions, false],
+                ["Environments", stats?.environments, false],
               ] as const
-            ).map(([label, value]) => (
+            ).map(([label, value, atCap]) => (
               <div
                 key={label}
                 className="rounded-md border border-border/40 bg-bg/40 px-2.5 py-2 text-center"
               >
-                <div className="font-mono text-[18px] font-semibold tabular-nums text-primary">
+                <div
+                  className={cn(
+                    "font-mono text-[18px] font-semibold tabular-nums",
+                    atCap ? "text-warning" : "text-primary"
+                  )}
+                >
                   {value ?? "—"}
                 </div>
                 <div className="text-[11px] text-muted">{label}</div>

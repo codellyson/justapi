@@ -21,6 +21,8 @@ import { settlePosition } from "../layout";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
 import { useAgentSync } from "../use-agent-sync";
+import { useCanvasSync } from "../use-canvas-sync";
+import { LimitNotice } from "./limit-notice";
 import { useSession } from "../../lib/auth-client";
 import { isEmbedded } from "../embedded";
 import { materializeFlow } from "../materialize";
@@ -248,7 +250,12 @@ const CanvasInner = () => {
   // browser is where they materialize and execute. Signed-in only (the
   // bridge is account-scoped), and never from the embedded preview.
   const { data: session } = useSession();
-  useAgentSync(!embedded && Boolean(session));
+  const syncEnabled = !embedded && Boolean(session);
+  // Live agent bridge, but let canvas persistence own board restoration
+  // (rehydrate=false) so the two don't spawn duplicate canvases.
+  useAgentSync(syncEnabled, false);
+  // Per-account canvas + environment persistence to D1 (signed-in only).
+  useCanvasSync(syncEnabled);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => setSelectedNodeId(node.id),
@@ -392,6 +399,7 @@ const CanvasInner = () => {
           </ReactFlow>
 
           {!embedded && <ControlCluster />}
+          {!embedded && <LimitNotice />}
           {embedded && <DemoOverlay />}
           {!embedded && graph.nodes.length === 0 && (
             <EmptyState onOpenImport={() => setImportOpen(true)} />

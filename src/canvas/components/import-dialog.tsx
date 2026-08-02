@@ -9,6 +9,7 @@ import { parseHar } from "../../utils/har";
 import { parseOpenApi, type OpenApiEndpoint } from "../parse-openapi";
 import { discoverSpec } from "../discover-spec";
 import { emptySnapshot, useCanvasStore } from "../use-canvas-store";
+import { createCanvasGuarded } from "../create-canvas";
 import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { gridPositions } from "../layout";
 import { MethodPill } from "./method-pill";
@@ -349,7 +350,13 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     const cs = useCanvasStore.getState();
     const envId = chosenServer ? ensureBaseEnv(chosenServer) : null;
 
-    if (effectiveDest === "new") cs.createGraph(hostName || "imported");
+    if (effectiveDest === "new") {
+      // A new-canvas import needs a canvas slot — respect the plan cap.
+      if (createCanvasGuarded(hostName || "imported") === null) {
+        onClose();
+        return;
+      }
+    }
 
     const positions = gridPositions(picks.length, importAnchor());
     cs.addRequestNodes(

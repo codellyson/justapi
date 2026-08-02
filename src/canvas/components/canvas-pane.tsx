@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Check, Pencil, Trash2, Plus, Eraser, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useCanvasStore } from "../use-canvas-store";
+import { useLimitsStore } from "../../stores/use-limits-store";
+import { createCanvasGuarded } from "../create-canvas";
 
 /**
  * Canvases panel: every named board, docked beside the rail like the
@@ -14,10 +16,15 @@ export const CanvasPane = () => {
   const graphs = useCanvasStore((s) => s.graphs);
   const activeGraphId = useCanvasStore((s) => s.activeGraphId);
   const setActiveGraph = useCanvasStore((s) => s.setActiveGraph);
-  const createGraph = useCanvasStore((s) => s.createGraph);
   const renameGraph = useCanvasStore((s) => s.renameGraph);
   const deleteGraph = useCanvasStore((s) => s.deleteGraph);
   const clearGraph = useCanvasStore((s) => s.clearGraph);
+  const limits = useLimitsStore((s) => s.limits);
+  const usage = useLimitsStore((s) => s.usage);
+  const synced = useLimitsStore((s) => s.synced);
+  const atCap = Boolean(
+    synced && limits && usage && usage.canvases >= limits.canvases
+  );
 
   const [confirmClear, setConfirmClear] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,12 +41,24 @@ export const CanvasPane = () => {
   return (
     <div className="flex w-60 flex-none flex-col border-r border-border/50 bg-bg-secondary font-sans">
       <div className="flex items-center justify-between border-b border-border/40 px-3 py-2">
-        <span className="text-[11px] text-muted">canvases</span>
+        <span className="text-[11px] text-muted">
+          canvases
+          {synced && limits && usage && (
+            <span className={cn("ml-1", atCap ? "text-warning" : "text-muted/70")}>
+              {usage.canvases}/{limits.canvases}
+            </span>
+          )}
+        </span>
         <button
           type="button"
-          onClick={() => createGraph()}
-          className="rounded p-1 text-secondary hover:bg-bg/60 hover:text-primary"
-          title="New canvas"
+          onClick={() => createCanvasGuarded()}
+          className={cn(
+            "rounded p-1 hover:bg-bg/60",
+            atCap
+              ? "text-muted/60 hover:text-warning"
+              : "text-secondary hover:text-primary"
+          )}
+          title={atCap ? "Free plan limit reached — delete one or upgrade" : "New canvas"}
         >
           <Plus className="h-3.5 w-3.5" />
         </button>

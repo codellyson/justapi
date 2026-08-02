@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useReactFlow } from "@xyflow/react";
+import { useReactFlow, type XYPosition } from "@xyflow/react";
 import { Search, X } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { smartParse } from "../parse-curl";
@@ -9,6 +9,7 @@ import { parseHar } from "../../utils/har";
 import { parseOpenApi, type OpenApiEndpoint } from "../parse-openapi";
 import { discoverSpec } from "../discover-spec";
 import { emptySnapshot, useCanvasStore } from "../use-canvas-store";
+import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { gridPositions } from "../layout";
 import { MethodPill } from "./method-pill";
 import type { CardRequestSnapshot } from "../types";
@@ -53,12 +54,22 @@ const endpointToCandidate = (ep: OpenApiEndpoint): Candidate => ({
  * OpenAPI (JSON/YAML) → endpoints; HAR → captured requests; otherwise split
  * into blocks and `smartParse` each (cURL / copy-as-fetch / "GET url" lines).
  */
-const parseInput = (raw: string): Candidate[] => {
+interface Parsed {
+  candidates: Candidate[];
+  servers: string[];
+}
+
+const parseInput = (raw: string): Parsed => {
   const text = raw.trim();
-  if (!text) return [];
+  if (!text) return { candidates: [], servers: [] };
 
   const openapi = parseOpenApi(text);
-  if (openapi) return openapi.map(endpointToCandidate);
+  if (openapi) {
+    return {
+      candidates: openapi.endpoints.map(endpointToCandidate),
+      servers: openapi.servers,
+    };
+  }
 
   // HAR?
   if (text.startsWith("{")) {
@@ -74,19 +85,22 @@ const parseInput = (raw: string): Candidate[] => {
           "HEAD",
           "OPTIONS",
         ]);
-        return har
-          .filter((c) => methods.has(c.method.toUpperCase()))
-          .map((c) => ({
-            name: pathOf(c.url),
-            snapshot: emptySnapshot({
-              method: c.method.toUpperCase() as CardRequestSnapshot["method"],
-              url: c.url,
-              urlRaw: c.url,
-              headers: c.requestHeaders ?? {},
-              body: c.requestBody || null,
-              bodyType: c.requestBody ? "raw" : "none",
-            }),
-          }));
+        return {
+          servers: [],
+          candidates: har
+            .filter((c) => methods.has(c.method.toUpperCase()))
+            .map((c) => ({
+              name: pathOf(c.url),
+              snapshot: emptySnapshot({
+                method: c.method.toUpperCase() as CardRequestSnapshot["method"],
+                url: c.url,
+                urlRaw: c.url,
+                headers: c.requestHeaders ?? {},
+                body: c.requestBody || null,
+                bodyType: c.requestBody ? "raw" : "none",
+              }),
+            })),
+        };
       }
     } catch {
       /* fall through */
@@ -125,7 +139,7 @@ const parseInput = (raw: string): Candidate[] => {
       }),
     });
   }
-  return out;
+  return { candidates: out, servers: [] };
 };
 
 interface ImportDialogProps {
@@ -140,13 +154,17 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
   const [authHeader, setAuthHeader] = useState("");
   const [fetching, setFetching] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [fetched, setFetched] = useState<Candidate[] | null>(null);
+  const [fetched, setFetched] = useState<Parsed | null>(null);
   const [search, setSearch] = useState("");
   const [tag, setTag] = useState<string | null>(null);
+  const [server, setServer] = useState("");
   const [excluded, setExcluded] = useState<Set<number>>(new Set());
 
   const parsed = useMemo(() => parseInput(raw), [raw]);
-  const candidates = fetched ?? parsed;
+  const source = fetched ?? parsed;
+  const candidates = source.candidates;
+  const servers = source.servers;
+  const chosenServer = server || servers[0] || "";
 
   const trimmed = raw.trim();
   const isSpecUrl =
@@ -182,6 +200,7 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     setFetchError(null);
     setSearch("");
     setTag(null);
+    setServer("");
   };
 
   const fetchSpec = async () => {
@@ -201,13 +220,35 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     }
     setSearch("");
     setTag(null);
+    // Default the base to the server matching the fetched host, else the last
+    // declared server (production is usually listed after local dev).
+    let host = "";
+    try {
+      host = new URL(trimmed).host;
+    } catch {
+      /* not a URL host */
+    }
+    const preferred =
+      result.servers.find((s) => {
+        try {
+          return new URL(s).host === host;
+        } catch {
+          return false;
+        }
+      }) ??
+      result.servers[result.servers.length - 1] ??
+      "";
+    setServer(preferred);
     // Large specs start with nothing selected — pick a tag, then select all.
     setExcluded(
       result.endpoints.length > 40
         ? new Set(result.endpoints.map((_, i) => i))
         : new Set()
     );
-    setFetched(result.endpoints.map(endpointToCandidate));
+    setFetched({
+      candidates: result.endpoints.map(endpointToCandidate),
+      servers: result.servers,
+    });
   };
 
   const setFilteredExcluded = (exclude: boolean) =>
@@ -217,13 +258,52 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
       return next;
     });
 
+  // Make a `{{base}}` environment for the chosen server and activate it, so the
+  // templated imported URLs resolve. Reuses an env that already has this base.
+  const activateBaseEnv = (base: string) => {
+    if (!base) return;
+    const es = useEnvironmentStore.getState();
+    const existing = es.environments.find((e) => e.variables.base === base);
+    if (existing) {
+      es.setActiveEnvironmentId(existing.id);
+      return;
+    }
+    let name = "imported";
+    try {
+      name = new URL(base).host;
+    } catch {
+      /* keep default */
+    }
+    es.addEnvironment({ name, variables: { base } });
+    const created = useEnvironmentStore
+      .getState()
+      .environments.find((e) => e.variables.base === base);
+    if (created) es.setActiveEnvironmentId(created.id);
+  };
+
+  // Drop the batch below existing content instead of on top of it.
+  const importAnchor = (): XYPosition => {
+    const cs = useCanvasStore.getState();
+    const nodes = cs.graphs[cs.activeGraphId]?.nodes ?? [];
+    if (!nodes.length) {
+      return screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+    }
+    let minX = Infinity;
+    let maxY = -Infinity;
+    for (const n of nodes) {
+      minX = Math.min(minX, n.position.x);
+      maxY = Math.max(maxY, n.position.y + (n.measured?.height ?? 120));
+    }
+    return { x: minX, y: maxY + 140 };
+  };
+
   const fanOut = () => {
     if (!picks.length || picks.length > MAX_ADD) return;
-    const origin = screenToFlowPosition({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-    const positions = gridPositions(picks.length, origin);
+    if (chosenServer) activateBaseEnv(chosenServer);
+    const positions = gridPositions(picks.length, importAnchor());
     addRequestNodes(
       picks.map(({ c }, i) => ({
         position: positions[i],
@@ -320,6 +400,29 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
                 none
               </button>
             </div>
+
+            {servers.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap items-center gap-1.5 px-3 text-[11px]">
+                <span className="text-muted">base</span>
+                {servers.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setServer(s)}
+                    title={s}
+                    className={cn(
+                      "max-w-[240px] truncate rounded-full border px-2 py-0.5 font-mono transition-colors",
+                      s === chosenServer
+                        ? "border-accent/60 bg-accent/10 text-accent"
+                        : "border-border/50 text-muted hover:text-secondary"
+                    )}
+                  >
+                    {s.replace(/^https?:\/\//, "")}
+                  </button>
+                ))}
+                <span className="text-muted">→ {"{{base}}"}</span>
+              </div>
+            )}
 
             {tags.length > 0 && (
               <div className="mb-1 flex max-h-[64px] flex-wrap gap-1 overflow-y-auto px-3">

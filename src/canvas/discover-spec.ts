@@ -7,6 +7,7 @@ import {
 
 export interface DiscoverResult {
   endpoints: OpenApiEndpoint[];
+  servers: string[];
 }
 export interface DiscoverError {
   error: string;
@@ -103,13 +104,33 @@ const dirOf = (startUrl: string): string => {
   }
 };
 
-const specFrom = (text: string): OpenApiEndpoint[] | null => {
+const resolveServers = (servers: string[], sourceUrl: string): string[] =>
+  servers.map((s) => {
+    if (/^https?:\/\//i.test(s)) return s;
+    try {
+      return new URL(s || "/", sourceUrl).href.replace(/\/$/, "");
+    } catch {
+      return s;
+    }
+  });
+
+const specFrom = (text: string, sourceUrl: string): DiscoverResult | null => {
   const direct = parseOpenApi(text);
-  if (direct && direct.length) return direct;
+  if (direct && direct.endpoints.length) {
+    return {
+      endpoints: direct.endpoints,
+      servers: resolveServers(direct.servers, sourceUrl),
+    };
+  }
   const inline = extractBalanced(text, SWAGGER_DOC);
   if (inline) {
     const eps = parseOpenApi(inline);
-    if (eps && eps.length) return eps;
+    if (eps && eps.endpoints.length) {
+      return {
+        endpoints: eps.endpoints,
+        servers: resolveServers(eps.servers, sourceUrl),
+      };
+    }
   }
   return null;
 };
@@ -136,8 +157,8 @@ export const discoverSpec = async (
 
   // The entry response may already be the spec, or a Swagger-UI init script /
   // HTML page that inlines it as `swaggerDoc`.
-  const direct = specFrom(first.text);
-  if (direct) return { endpoints: direct };
+  const direct = specFrom(first.text, startUrl);
+  if (direct) return direct;
 
   // Otherwise chase candidate spec URLs: the one the page advertises, then any
   // referenced init script / .json / .yaml, then conventional locations.
@@ -160,8 +181,8 @@ export const discoverSpec = async (
     tried.add(url);
     const body = await proxyGetText(url, authHeader);
     if (!body || body.status >= 400) continue;
-    const eps = specFrom(body.text);
-    if (eps) return { endpoints: eps };
+    const eps = specFrom(body.text, url);
+    if (eps) return eps;
   }
 
   return { error: "found the page but couldn't locate an OpenAPI spec in it" };

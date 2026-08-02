@@ -14,6 +14,13 @@ export interface OpenApiEndpoint {
   tag: string | null;
 }
 
+export interface OpenApiParse {
+  /** Endpoints with `{{base}}`-templated URLs (the host lives in `servers`). */
+  endpoints: OpenApiEndpoint[];
+  /** Declared server base URLs, most specific first. */
+  servers: string[];
+}
+
 const METHODS: HttpMethod[] = [
   "GET",
   "POST",
@@ -177,24 +184,28 @@ const schemeToAuth = (scheme: Json | null): AuthResult => {
 
 // --- main ------------------------------------------------------------------
 
-export const parseOpenApiDoc = (docIn: unknown): OpenApiEndpoint[] | null => {
+export const parseOpenApiDoc = (docIn: unknown): OpenApiParse | null => {
   if (!docIn || typeof docIn !== "object") return null;
   const doc = docIn as Json;
   const isV3 = typeof doc.openapi === "string";
   const isV2 = typeof doc.swagger === "string";
   if (!isV3 && !isV2) return null;
 
-  let base = "";
+  const servers: string[] = [];
   if (isV3) {
-    const servers = doc.servers as { url?: string }[] | undefined;
-    base = servers?.[0]?.url ?? "";
+    for (const s of (doc.servers as { url?: string }[] | undefined) ?? []) {
+      if (s?.url) servers.push(s.url.replace(/\/$/, ""));
+    }
   } else {
     const schemes = doc.schemes as string[] | undefined;
     const host = doc.host as string | undefined;
     const basePath = (doc.basePath as string | undefined) ?? "";
-    if (host) base = `${schemes?.[0] ?? "https"}://${host}${basePath}`;
+    if (host) {
+      servers.push(
+        `${schemes?.[0] ?? "https"}://${host}${basePath}`.replace(/\/$/, "")
+      );
+    }
   }
-  base = base.replace(/\/$/, "");
 
   const secSchemes =
     (isV3
@@ -212,7 +223,7 @@ export const parseOpenApiDoc = (docIn: unknown): OpenApiEndpoint[] | null => {
   };
 
   const paths = doc.paths as Record<string, Json> | undefined;
-  if (!paths || typeof paths !== "object") return [];
+  if (!paths || typeof paths !== "object") return { endpoints: [], servers };
 
   const endpoints: OpenApiEndpoint[] = [];
   for (const [path, item] of Object.entries(paths)) {
@@ -274,7 +285,7 @@ export const parseOpenApiDoc = (docIn: unknown): OpenApiEndpoint[] | null => {
 
       endpoints.push({
         method,
-        url: `${base}${templated}${qs}`,
+        url: `{{base}}${templated}${qs}`,
         name:
           (op.summary as string) ||
           (op.operationId as string) ||
@@ -288,7 +299,7 @@ export const parseOpenApiDoc = (docIn: unknown): OpenApiEndpoint[] | null => {
       });
     }
   }
-  return endpoints;
+  return { endpoints, servers };
 };
 
 /**
@@ -296,7 +307,7 @@ export const parseOpenApiDoc = (docIn: unknown): OpenApiEndpoint[] | null => {
  * endpoints: path/query params, example request bodies (schemas resolved), and
  * auth mapped from securitySchemes. Returns null if the text isn't a spec.
  */
-export const parseOpenApi = (raw: string): OpenApiEndpoint[] | null => {
+export const parseOpenApi = (raw: string): OpenApiParse | null => {
   const text = raw.trim();
   if (!text) return null;
   let doc: unknown;

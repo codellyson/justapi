@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   Check,
   Copy,
+  Gauge,
   KeyRound,
   Link2,
   Trash2,
@@ -85,6 +86,13 @@ export const AccountView = ({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyProvider, setBusyProvider] = useState<string | null>(null);
+  const [stats, setStats] = useState<{
+    canvases: number;
+    collections: number;
+    requests: number;
+    assertions: number;
+    environments: number;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     const [keyRes, acctRes] = await Promise.all([
@@ -100,6 +108,49 @@ export const AccountView = ({
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Workspace counts come from the browser's local canvas store — read directly
+  // (not via the zustand store) to keep React Flow out of this route's bundle,
+  // and only on the client to avoid an SSR/hydration mismatch. These are
+  // device-local until per-account remote persistence lands.
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem("justapi-canvas") || "null");
+      const graphs = (parsed?.state?.graphs ?? {}) as Record<
+        string,
+        { nodes?: { type?: string }[] }
+      >;
+      let collections = 0;
+      let requests = 0;
+      let assertions = 0;
+      for (const g of Object.values(graphs)) {
+        for (const n of g.nodes ?? []) {
+          if (n.type === "collection") collections++;
+          else if (n.type === "request") requests++;
+          else if (n.type === "assert") assertions++;
+        }
+      }
+      const envRaw = JSON.parse(
+        localStorage.getItem("justapi-environments") || "null"
+      );
+      const environments = (envRaw?.state?.environments ?? []).length;
+      setStats({
+        canvases: Object.keys(graphs).length,
+        collections,
+        requests,
+        assertions,
+        environments,
+      });
+    } catch {
+      setStats({
+        canvases: 0,
+        collections: 0,
+        requests: 0,
+        assertions: 0,
+        environments: 0,
+      });
+    }
+  }, []);
 
   const mint = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,6 +286,38 @@ export const AccountView = ({
         </div>
 
         {error && <p className="mb-3 text-[12px] text-danger">{error}</p>}
+
+        <section className="mb-4 rounded-xl border border-border/60 bg-bg-secondary/60 p-4">
+          <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold">
+            <Gauge className="h-4 w-4 text-accent" />
+            Workspace
+          </div>
+          <p className="mb-3 text-[12px] text-muted">
+            Counted from this device. Per-account usage across devices starts
+            once remote sync is enabled.
+          </p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {(
+              [
+                ["Canvases", stats?.canvases],
+                ["Collections", stats?.collections],
+                ["Requests", stats?.requests],
+                ["Assertions", stats?.assertions],
+                ["Environments", stats?.environments],
+              ] as const
+            ).map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-md border border-border/40 bg-bg/40 px-2.5 py-2 text-center"
+              >
+                <div className="font-mono text-[18px] font-semibold tabular-nums text-primary">
+                  {value ?? "—"}
+                </div>
+                <div className="text-[11px] text-muted">{label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className="mb-4 rounded-xl border border-border/60 bg-bg-secondary/60 p-4">
           <div className="mb-1 flex items-center gap-2 text-[13px] font-semibold">

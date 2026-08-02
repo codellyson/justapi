@@ -8,7 +8,7 @@ import { useEnvironmentStore } from "../../stores/use-environment-store";
 import { useActiveGraph, useCanvasStore } from "../use-canvas-store";
 import { useRunStore } from "../use-run-store";
 import { formatSize } from "../format";
-import type { RequestNodeData } from "../types";
+import type { CollectionNodeData, RequestNodeData } from "../types";
 
 const statusTone = (status: number): string => {
   if (status >= 200 && status < 300) return "text-success";
@@ -34,9 +34,18 @@ const pathOf = (url: string): string => {
 export const StatusBar = () => {
   const graph = useActiveGraph();
   const runs = useRunStore((s) => s.runs);
-  const activeEnv = useEnvironmentStore((s) =>
-    s.environments.find((e) => e.id === s.activeEnvironmentId)
-  );
+  const environments = useEnvironmentStore((s) => s.environments);
+  const activeEnvironmentId = useEnvironmentStore((s) => s.activeEnvironmentId);
+
+  // The env this canvas actually runs under (what the engine resolves): the
+  // origin's own pin, or the app's active env as fallback. Showing the global
+  // active env here misleads when a canvas is pinned to its own.
+  const origin = graph.nodes.find((n) => n.type === "collection");
+  const originEnvId = (origin?.data as CollectionNodeData | undefined)
+    ?.environmentId;
+  const effectiveEnvId = originEnvId ?? activeEnvironmentId;
+  const activeEnv = environments.find((e) => e.id === effectiveEnvId);
+  const envPinned = Boolean(originEnvId);
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const { zoom } = useViewport();
   const tidyGraph = useCanvasStore((s) => s.tidyGraph);
@@ -107,8 +116,16 @@ export const StatusBar = () => {
       <div className="flex-1" />
 
       {activeEnv && (
-        <span className="hidden sm:inline">
+        <span
+          className="hidden sm:inline"
+          title={
+            envPinned
+              ? "This canvas is pinned to its own environment"
+              : "The app's active environment"
+          }
+        >
           env <span className="text-secondary">{activeEnv.name.toLowerCase()}</span>
+          {envPinned && <span className="text-muted"> ·pinned</span>}
         </span>
       )}
       <span className="hidden sm:inline">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useReactFlow, type XYPosition } from "@xyflow/react";
 import { Search, X } from "lucide-react";
 import { cn } from "../../utils/cn";
@@ -200,6 +200,31 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     return [...t].sort();
   }, [candidates]);
 
+  // Seed the initial selection whenever a new candidate set appears (paste or
+  // fetch): a big tagged spec opens on its first resource group fully selected
+  // (never a wall of greyed rows with Add disabled); a big untagged spec opens
+  // with nothing selected so the user narrows; a small spec selects all.
+  const seededRef = useRef<string>("");
+  useEffect(() => {
+    if (!candidates.length) {
+      seededRef.current = "";
+      return;
+    }
+    const key = `${fetched ? "f" : "p"}:${candidates.length}:${tags.join(",")}`;
+    if (key === seededRef.current) return;
+    seededRef.current = key;
+    if (candidates.length > 40 && tags.length > 0) {
+      setTag(tags[0]);
+      setExcluded(new Set());
+    } else if (candidates.length > 40) {
+      setTag(null);
+      setExcluded(new Set(candidates.map((_, i) => i)));
+    } else {
+      setTag(null);
+      setExcluded(new Set());
+    }
+  }, [candidates, tags, fetched]);
+
   const q = search.trim().toLowerCase();
   const filtered = useMemo(
     () =>
@@ -244,7 +269,6 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
       return;
     }
     setSearch("");
-    setTag(null);
     // Default the base to the server matching the fetched host, else the last
     // declared server (production is usually listed after local dev).
     let host = "";
@@ -264,12 +288,8 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
       result.servers[result.servers.length - 1] ??
       "";
     setServer(preferred);
-    // Large specs start with nothing selected — pick a tag, then select all.
-    setExcluded(
-      result.endpoints.length > 40
-        ? new Set(result.endpoints.map((_, i) => i))
-        : new Set()
-    );
+    // Initial selection (first-tag for big specs) is handled centrally by the
+    // effect below, so paste and fetch behave identically.
     setFetched({
       candidates: result.endpoints.map(endpointToCandidate),
       servers: result.servers,

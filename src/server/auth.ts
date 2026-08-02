@@ -16,8 +16,32 @@ export async function getAuth() {
     database: drizzleAdapter(db, { provider: "sqlite", schema }),
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL,
+    // A provider is enabled only when both halves of its credential are set,
+    // so the app runs fine before OAuth is configured (dev, or email-only).
+    socialProviders: socialProvidersFrom(env),
     ...sharedAuthConfig,
   });
+}
+
+type Creds = { clientId: string; clientSecret: string };
+function socialProvidersFrom(env: CloudflareEnv): {
+  google?: Creds;
+  github?: Creds;
+} {
+  const providers: { google?: Creds; github?: Creds } = {};
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+    providers.google = {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    };
+  }
+  if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
+    providers.github = {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    };
+  }
+  return providers;
 }
 
 export type Auth = Awaited<ReturnType<typeof getAuth>>;

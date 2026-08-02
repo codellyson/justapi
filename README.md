@@ -102,8 +102,40 @@ them (the agent-bridge SSE only connects when signed in).
 
 - **Users** sign up at `/signup`, sign in at `/login`. The rail's account icon
   shows "Sign in" when signed out, "Account" when signed in.
+- **Social login (Google / GitHub)** appears automatically once its credentials
+  are set — see below. Signed-in users link/unlink providers from `/account`.
 - **Tokens** are minted at `/account` — the plaintext is shown once. Use it as
   the MCP bridge's `JUSTAPI_TOKEN`.
+
+### Google & GitHub login
+
+Each provider turns on only when **both** halves of its credential are present,
+so the buttons stay hidden until you configure them. Create an OAuth app with
+these callback URLs (dev shown; swap the origin for your deployed URL):
+
+- Google — Authorized redirect URI: `http://localhost:3100/api/auth/callback/google`
+- GitHub — Authorization callback URL: `http://localhost:3100/api/auth/callback/github`
+
+Then set the credentials. **Dev** (`.dev.vars`, restart `pnpm dev` to pick up):
+
+```
+GOOGLE_CLIENT_ID=…
+GOOGLE_CLIENT_SECRET=…
+GITHUB_CLIENT_ID=…
+GITHUB_CLIENT_SECRET=…
+```
+
+**Production** (Cloudflare secrets):
+
+```bash
+wrangler secret put GOOGLE_CLIENT_ID
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put GITHUB_CLIENT_ID
+wrangler secret put GITHUB_CLIENT_SECRET
+```
+
+No migration is needed — the existing `account` table already stores linked
+providers.
 - Auth is [better-auth](https://better-auth.com): `src/server/auth.ts` builds it
   per-request from the D1 binding; `app/api/auth/[...all]` mounts the handler.
   Schema lives in `src/db/schema.ts` (regenerate with `pnpm auth:generate`, then

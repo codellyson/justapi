@@ -4,13 +4,21 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "../utils/cn";
 import { authClient } from "../lib/auth-client";
+import type { SocialProviderFlags } from "../server/social-providers";
+import { GoogleIcon, GithubIcon } from "./provider-icons";
 
 type Mode = "login" | "signup";
 
 const input =
   "w-full rounded-md border border-border/50 bg-bg px-2.5 py-2 text-[13px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70";
 
-export const AuthForm = ({ initialMode }: { initialMode: Mode }) => {
+export const AuthForm = ({
+  initialMode,
+  providers,
+}: {
+  initialMode: Mode;
+  providers?: SocialProviderFlags;
+}) => {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/app";
@@ -39,7 +47,19 @@ export const AuthForm = ({ initialMode }: { initialMode: Mode }) => {
     router.refresh();
   };
 
+  const social = async (provider: "google" | "github") => {
+    setError(null);
+    setBusy(true);
+    // Redirects to the provider on success; only lands back here on failure.
+    const res = await authClient.signIn.social({ provider, callbackURL: next });
+    if (res?.error) {
+      setError(res.error.message ?? "Couldn't start sign-in");
+      setBusy(false);
+    }
+  };
+
   const isSignup = mode === "signup";
+  const hasSocial = Boolean(providers?.google || providers?.github);
 
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-bg px-4 font-sans">
@@ -55,6 +75,40 @@ export const AuthForm = ({ initialMode }: { initialMode: Mode }) => {
             </div>
           </div>
         </div>
+
+        {hasSocial && (
+          <>
+            <div className="space-y-2">
+              {providers?.google && (
+                <button
+                  type="button"
+                  onClick={() => social("google")}
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2.5 rounded-md border border-border/60 bg-bg px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-bg/60 disabled:opacity-60"
+                >
+                  <GoogleIcon className="h-4 w-4" />
+                  Continue with Google
+                </button>
+              )}
+              {providers?.github && (
+                <button
+                  type="button"
+                  onClick={() => social("github")}
+                  disabled={busy}
+                  className="flex w-full items-center justify-center gap-2.5 rounded-md border border-border/60 bg-bg px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-bg/60 disabled:opacity-60"
+                >
+                  <GithubIcon className="h-4 w-4" />
+                  Continue with GitHub
+                </button>
+              )}
+            </div>
+            <div className="my-4 flex items-center gap-3 text-[11px] text-muted">
+              <span className="h-px flex-1 bg-border/50" />
+              or
+              <span className="h-px flex-1 bg-border/50" />
+            </div>
+          </>
+        )}
 
         <form onSubmit={submit} className="space-y-2.5">
           {isSignup && (

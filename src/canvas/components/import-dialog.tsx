@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useReactFlow, type XYPosition } from "@xyflow/react";
 import { Search, X } from "lucide-react";
 import { cn } from "../../utils/cn";
@@ -149,6 +149,16 @@ interface ImportDialogProps {
 export const ImportDialog = ({ onClose }: ImportDialogProps) => {
   const { screenToFlowPosition } = useReactFlow();
   const addRequestNodes = useCanvasStore((s) => s.addRequestNodes);
+
+  // Close only via the ✕ or Escape — never on a backdrop misclick, which loses
+  // a fetched spec + selection.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const [raw, setRaw] = useState("");
   const [authHeader, setAuthHeader] = useState("");
@@ -319,14 +329,8 @@ export const ImportDialog = ({ onClose }: ImportDialogProps) => {
     "rounded-md border border-border/50 bg-bg px-2.5 py-1.5 text-[12px] text-primary outline-none focus:border-accent/60 placeholder:text-muted/70";
 
   return (
-    <div
-      className="absolute inset-0 z-40 flex items-center justify-center bg-bg/60 backdrop-blur-[2px]"
-      onClick={onClose}
-    >
-      <div
-        className="flex max-h-[82vh] w-[560px] max-w-[calc(100vw-32px)] flex-col rounded-xl border border-border/60 bg-bg-secondary/95 font-sans shadow-[0_16px_40px_-16px_rgba(0,0,0,0.5)] backdrop-blur-sm"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-bg/60 backdrop-blur-[2px]">
+      <div className="flex max-h-[82vh] w-[560px] max-w-[calc(100vw-32px)] flex-col rounded-xl border border-border/60 bg-bg-secondary/95 font-sans shadow-[0_16px_40px_-16px_rgba(0,0,0,0.5)] backdrop-blur-sm">
         <div className="flex items-center justify-between border-b border-border/40 px-3 py-2.5">
           <span className="text-[12px] text-muted">
             import — curl · fetch · HAR · OpenAPI (JSON/YAML) · Swagger URL

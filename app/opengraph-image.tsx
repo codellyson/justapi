@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 
 export const alt =
-  'JustAPI — Type, send, drag, send again. An API client built for flow state.';
+  'JustAPI — Test APIs as a graph, not a folder of tabs. Open the canvas free, no account needed.';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -41,44 +41,43 @@ export default async function OGImage() {
               textTransform: 'uppercase',
             }}
           >
-            API client · built for flow state
+            Postman, as a graph
           </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           <div
             style={{
-              fontSize: 92,
+              fontSize: 84,
               fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: -3,
             }}
           >
-            Type, send, drag,
+            Test APIs as a graph,
           </div>
           <div
             style={{
-              fontSize: 92,
+              fontSize: 84,
               fontWeight: 700,
               lineHeight: 1.05,
               letterSpacing: -3,
               color: '#2f81f7',
             }}
           >
-            send again.
+            not a folder of tabs.
           </div>
           <div
             style={{
-              marginTop: 28,
+              marginTop: 26,
               fontSize: 26,
               color: '#8d96a0',
               maxWidth: 1000,
               lineHeight: 1.4,
             }}
           >
-            One input. Responses materialize as sheets you can stack,
-            dismiss, and recall. No tab-switching, no sidebars, no
-            dropdowns mid-typing.
+            Drop requests on a canvas, wire a response value into the next
+            call, and run the whole chain — or let an agent drive it.
           </div>
         </div>
 
@@ -87,12 +86,24 @@ export default async function OGImage() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            fontSize: 22,
-            color: '#6e7681',
           }}
         >
-          <span>justapi.kreativekorna.com</span>
-          <span>by KreativeKorna</span>
+          <div
+            style={{
+              display: 'flex',
+              backgroundColor: '#2f81f7',
+              color: '#ffffff',
+              fontSize: 25,
+              fontWeight: 600,
+              padding: '15px 30px',
+              borderRadius: 12,
+            }}
+          >
+            Open the canvas — free, no account
+          </div>
+          <div style={{ display: 'flex', fontSize: 22, color: '#6e7681' }}>
+            justapi.kreativekorna.com · by KreativeKorna
+          </div>
         </div>
       </div>
     ),

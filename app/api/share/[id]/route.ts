@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { get, isValidId } from '../store';
+import { requireAuth, isAuthError } from '@/src/server/require-auth';
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuth(request);
+  if (isAuthError(auth)) return auth;
   const { id } = await params;
   if (!isValidId(id)) {
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   }
-  const data = await get(id);
+  const { env } = await getCloudflareContext({ async: true });
+  const data = await get(env.SHARE_BUCKET, id);
   if (data === null) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

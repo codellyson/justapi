@@ -5,11 +5,13 @@
  * canvas natively.
  *
  * Register (Claude Code):
- *   claude mcp add justapi -- node /path/to/justapi/mcp/server.mjs
+ *   claude mcp add justapi -e JUSTAPI_TOKEN=<token> -- node /path/to/justapi/mcp/server.mjs
  *
- * Requires the app running (`pnpm dev`). With the canvas open in a
- * browser, flows execute there so the human watches them run; with no
- * canvas connected they run headless server-side.
+ * Requires the app running (`pnpm dev`). The bridge is account-gated, so
+ * mint a personal access token in JustAPI (Account → Mint token) and pass
+ * it as JUSTAPI_TOKEN. With the canvas open in a browser, flows execute
+ * there so the human watches them run; with no canvas connected they run
+ * headless server-side.
  * Override the app URL with JUSTAPI_URL (default http://localhost:3000).
  */
 
@@ -21,6 +23,10 @@ const BASE = (process.env.JUSTAPI_URL ?? "http://localhost:3000").replace(
   /\/$/,
   ""
 );
+
+// JustAPI's bridge is account-gated. Mint a personal access token in the app
+// (Account → Mint token) and expose it as JUSTAPI_TOKEN.
+const TOKEN = process.env.JUSTAPI_TOKEN;
 
 const SPEC_REFERENCE = `Flow spec (justapiFlow: 1):
 {
@@ -80,10 +86,12 @@ const errorResult = (message) => ({
   isError: true,
 });
 
-const call = async (path, init) => {
+const call = async (path, init = {}) => {
+  const headers = { ...(init.headers ?? {}) };
+  if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
   let res;
   try {
-    res = await fetch(`${BASE}${path}`, init);
+    res = await fetch(`${BASE}${path}`, { ...init, headers });
   } catch (err) {
     throw new Error(
       `Could not reach JustAPI at ${BASE} (${err.message}). ` +
@@ -91,6 +99,13 @@ const call = async (path, init) => {
     );
   }
   const body = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    throw new Error(
+      TOKEN
+        ? "401 Unauthorized — the JUSTAPI_TOKEN is invalid or revoked. Mint a new one in JustAPI → Account and update this server's env."
+        : "401 Unauthorized — JustAPI's bridge requires a token. Mint one in JustAPI → Account, then set JUSTAPI_TOKEN in this MCP server's env."
+    );
+  }
   if (!res.ok) {
     const detail = body.errors
       ? body.errors.join("; ")

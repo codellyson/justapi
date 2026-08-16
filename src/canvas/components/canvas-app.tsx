@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -16,10 +16,18 @@ import "../canvas.css";
 import { cn } from "../../utils/cn";
 
 import { useCanvasStore, useActiveGraph } from "../use-canvas-store";
+import { useRunStore } from "../use-run-store";
 import { settlePosition } from "../layout";
 import { runNode } from "../engine";
 import { loadSharedSnapshot } from "../share";
 import { useAgentSync } from "../use-agent-sync";
+import { useCanvasSync } from "../use-canvas-sync";
+import { LimitNotice } from "./limit-notice";
+import { useSession } from "../../lib/auth-client";
+import { isEmbedded } from "../embedded";
+import { materializeFlow } from "../materialize";
+import { makeDemoFlow } from "../demo-flow";
+import { DemoOverlay } from "./demo-overlay";
 import { RequestNodeCard } from "./request-node";
 import { CollectionNodeCard } from "./collection-node";
 import { AssertNodeCard } from "./assert-node";
@@ -108,11 +116,146 @@ const CanvasInner = () => {
     }
   }, []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView, setViewport: applyViewport, setCenter, getZoom } =
+    useReactFlow();
+  const tidyGraph = useCanvasStore((s) => s.tidyGraph);
+
+  // Live preview inside the marketing-page iframe: read-only, no bridge, and
+  // seeded with a curated demo flow instead of the visitor's saved canvas.
+  const embedded = useMemo(() => isEmbedded(), []);
+
+  useEffect(() => {
+    if (!embedded) return;
+    materializeFlow(makeDemoFlow(`${window.location.origin}/api/sample`));
+    // The demo is added after React Flow's initial (empty-graph) fitView, which
+    // doesn't re-fire on graph changes — so once the new nodes have mounted and
+    // measured, arrange and frame them (what the tidy button does manually).
+    const t = setTimeout(() => {
+      tidyGraph();
+      void fitView({ padding: 0.2, minZoom: 0.5, maxZoom: 1, duration: 300 });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [embedded, tidyGraph, fitView]);
+
+  // After the initial mount, React Flow's fitView prop doesn't re-fire when the
+  // active graph changes — an agent materializes a flow, or you switch canvases.
+  // Restore that graph's saved view, or frame it if it has none. (No re-layout,
+  // so a hand-arranged board is never reshuffled.)
+  const prevGraphIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (embedded) return;
+    const prev = prevGraphIdRef.current;
+    prevGraphIdRef.current = graph.id;
+    if (prev === null || prev === graph.id) return;
+    const vp = useCanvasStore.getState().graphs[graph.id]?.viewport;
+    if (vp) {
+      void applyViewport(vp, { duration: 200 });
+      return;
+    }
+    const t = setTimeout(() => {
+      void fitView({ padding: 0.2, minZoom: 0.65, maxZoom: 1, duration: 250 });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [graph.id, embedded, applyViewport, fitView]);
+
+  // Follow the run: pan the camera node-by-node as the flow executes, so the
+  // human watches it move through the tree. Subscribing to the run store (vs a
+  // React effect on `runs`) catches every pending transition even when requests
+  // finish faster than React re-renders; a paced queue dwells on each node so a
+  // fast flow doesn't skip straight to the last one. Only request nodes are
+  // followed — the origin stays pending for the whole flow. Pans, never zooms.
+  // Runs in the embed too, so the demo play button gets the same follow.
+  useEffect(() => {
+    const queue: string[] = [];
+    const seen = new Set<string>();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let runActive = false;
+    // Captured once per run so rapid pans never read a mid-animation zoom and
+    // drift the camera; we only pan, so the zoom stays exactly where it started.
+    let runZoom = 1;
+
+    const centerOn = (id: string) => {
+      const n = useCanvasStore
+        .getState()
+        .graphs[graph.id]?.nodes.find((x) => x.id === id);
+      if (!n) return;
+      const w = n.measured?.width ?? n.width ?? 320;
+      const h = n.measured?.height ?? n.height ?? 120;
+      void setCenter(n.position.x + w / 2, n.position.y + h / 2, {
+        zoom: runZoom,
+        duration: 350,
+      });
+    };
+
+    const advance = () => {
+      const id = queue.shift();
+      if (!id) {
+        timer = null;
+        return;
+      }
+      centerOn(id);
+      timer = setTimeout(advance, 550);
+    };
+
+    let prev = useRunStore.getState().runs;
+    const unsub = useRunStore.subscribe((state) => {
+      const next = state.runs;
+      const anyPending = Object.values(next).some((r) => r.status === "pending");
+      if (anyPending && !runActive) {
+        // A fresh run started — reset the walk and lock in a comfortable zoom
+        // (so the movement is visible even from a zoomed-out view).
+        runActive = true;
+        seen.clear();
+        queue.length = 0;
+        runZoom = Math.min(Math.max(getZoom(), 0.8), 1.4);
+        // Begin at the origin so a whole-flow run always pans back to the top
+        // of the tree first. Only runFlow marks the origin pending — a single
+        // node run won't, and shouldn't jump to the origin.
+        const origin = useCanvasStore
+          .getState()
+          .graphs[graph.id]?.nodes.find((n) => n.type === "collection");
+        if (origin && next[origin.id]?.status === "pending") {
+          seen.add(origin.id);
+          queue.push(origin.id);
+          if (!timer) advance();
+        }
+      }
+      for (const id in next) {
+        if (
+          next[id]?.status === "pending" &&
+          prev[id]?.status !== "pending" &&
+          !seen.has(id)
+        ) {
+          const node = useCanvasStore
+            .getState()
+            .graphs[graph.id]?.nodes.find((n) => n.id === id);
+          if (node?.type === "request") {
+            seen.add(id);
+            queue.push(id);
+            if (!timer) advance();
+          }
+        }
+      }
+      if (!anyPending) runActive = false;
+      prev = next;
+    });
+
+    return () => {
+      unsub();
+      if (timer) clearTimeout(timer);
+    };
+  }, [graph.id, setCenter, getZoom]);
 
   // Agents push flows and run requests through the local bridge; this
-  // browser is where they materialize and execute.
-  useAgentSync();
+  // browser is where they materialize and execute. Signed-in only (the
+  // bridge is account-scoped), and never from the embedded preview.
+  const { data: session } = useSession();
+  const syncEnabled = !embedded && Boolean(session);
+  // Live agent bridge, but let canvas persistence own board restoration
+  // (rehydrate=false) so the two don't spawn duplicate canvases.
+  useAgentSync(syncEnabled, false);
+  // Per-account canvas + environment persistence to D1 (signed-in only).
+  useCanvasSync(syncEnabled);
 
   const onNodeClick: NodeMouseHandler = useCallback(
     (_e, node) => setSelectedNodeId(node.id),
@@ -191,33 +334,38 @@ const CanvasInner = () => {
 
   return (
     <div className="justapi-canvas flex h-[100dvh] w-full flex-col bg-bg text-primary">
-      {/* main row: rail · docked pane · canvas · docked drawer */}
+      {/* main row: rail · docked pane · canvas · docked drawer.
+          The embed hides all chrome and shows only the canvas. */}
       <div className="flex min-h-0 flex-1">
-        <Rail
-          libraryOpen={leftPane === "collections"}
-          onToggleLibrary={() => togglePane("collections")}
-          onOpenImport={() => setImportOpen(true)}
-          specOpen={specOpen}
-          onToggleSpec={() => setSpecOpen((o) => !o)}
-          canvasesOpen={leftPane === "canvases"}
-          onToggleCanvases={() => togglePane("canvases")}
-          snippetsOpen={leftPane === "snippets"}
-          onToggleSnippets={() => togglePane("snippets")}
-          themeOpen={leftPane === "theme"}
-          onToggleTheme={() => togglePane("theme")}
-          onStartTour={() => setTourSignal((n) => n + 1)}
-        />
-        <div
-          className={cn(
-            "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
-            leftPane ? "w-60" : "w-0"
-          )}
-        >
-          {displayedPane === "collections" && <CollectionsPane />}
-          {displayedPane === "canvases" && <CanvasPane />}
-          {displayedPane === "snippets" && <SnippetsPane />}
-          {displayedPane === "theme" && <ThemePane />}
-        </div>
+        {!embedded && (
+          <>
+            <Rail
+              libraryOpen={leftPane === "collections"}
+              onToggleLibrary={() => togglePane("collections")}
+              onOpenImport={() => setImportOpen(true)}
+              specOpen={specOpen}
+              onToggleSpec={() => setSpecOpen((o) => !o)}
+              canvasesOpen={leftPane === "canvases"}
+              onToggleCanvases={() => togglePane("canvases")}
+              snippetsOpen={leftPane === "snippets"}
+              onToggleSnippets={() => togglePane("snippets")}
+              themeOpen={leftPane === "theme"}
+              onToggleTheme={() => togglePane("theme")}
+              onStartTour={() => setTourSignal((n) => n + 1)}
+            />
+            <div
+              className={cn(
+                "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
+                leftPane ? "w-60" : "w-0"
+              )}
+            >
+              {displayedPane === "collections" && <CollectionsPane />}
+              {displayedPane === "canvases" && <CanvasPane />}
+              {displayedPane === "snippets" && <SnippetsPane />}
+              {displayedPane === "theme" && <ThemePane />}
+            </div>
+          </>
+        )}
 
         <div className="relative min-w-0 flex-1">
           <ReactFlow
@@ -239,7 +387,10 @@ const CanvasInner = () => {
             defaultViewport={graph.viewport ?? undefined}
             fitView={!graph.viewport}
             fitViewOptions={{ padding: 0.25, maxZoom: 1, minZoom: 0.65 }}
-            deleteKeyCode={["Backspace", "Delete"]}
+            deleteKeyCode={embedded ? null : ["Backspace", "Delete"]}
+            nodesDraggable={!embedded}
+            nodesConnectable={!embedded}
+            elementsSelectable={!embedded}
             minZoom={0.15}
             maxZoom={2}
             proOptions={{ hideAttribution: true }}
@@ -247,26 +398,32 @@ const CanvasInner = () => {
             <Background variant={BackgroundVariant.Dots} gap={30} size={1} />
           </ReactFlow>
 
-          <ControlCluster />
-          {graph.nodes.length === 0 && (
+          {!embedded && <ControlCluster />}
+          {!embedded && <LimitNotice />}
+          {embedded && <DemoOverlay />}
+          {!embedded && graph.nodes.length === 0 && (
             <EmptyState onOpenImport={() => setImportOpen(true)} />
           )}
         </div>
 
-        <div
-          className={cn(
-            "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
-            specOpen ? "w-[380px]" : "w-0"
-          )}
-        >
-          {specMounted && <SpecDrawer onClose={() => setSpecOpen(false)} />}
-        </div>
+        {!embedded && (
+          <div
+            className={cn(
+              "flex flex-none overflow-hidden transition-[width] duration-200 ease-out",
+              specOpen ? "w-[380px]" : "w-0"
+            )}
+          >
+            {specMounted && <SpecDrawer onClose={() => setSpecOpen(false)} />}
+          </div>
+        )}
       </div>
 
-      <StatusBar />
+      {!embedded && <StatusBar />}
 
-      {importOpen && <ImportDialog onClose={() => setImportOpen(false)} />}
-      <Tour startSignal={tourSignal} />
+      {!embedded && importOpen && (
+        <ImportDialog onClose={() => setImportOpen(false)} />
+      )}
+      {!embedded && <Tour startSignal={tourSignal} />}
     </div>
   );
 };

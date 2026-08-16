@@ -1,27 +1,27 @@
 import 'server-only';
-import { put as blobPut, head, BlobNotFoundError } from '@vercel/blob';
 
-const blobPath = (id: string) => `shares/${id}.json`;
+const objectKey = (id: string) => `shares/${id}.json`;
 
-export async function put(id: string, data: string): Promise<void> {
-  await blobPut(blobPath(id), data, {
-    access: 'public',
-    addRandomSuffix: false,
-    contentType: 'application/json',
-    cacheControlMaxAge: 31536000,
+export async function put(
+  bucket: R2Bucket,
+  id: string,
+  data: string
+): Promise<void> {
+  await bucket.put(objectKey(id), data, {
+    httpMetadata: {
+      contentType: 'application/json',
+      cacheControl: 'public, max-age=31536000, immutable',
+    },
   });
 }
 
-export async function get(id: string): Promise<string | null> {
-  try {
-    const blob = await head(blobPath(id));
-    const res = await fetch(blob.url);
-    if (!res.ok) return null;
-    return await res.text();
-  } catch (err) {
-    if (err instanceof BlobNotFoundError) return null;
-    throw err;
-  }
+export async function get(
+  bucket: R2Bucket,
+  id: string
+): Promise<string | null> {
+  const obj = await bucket.get(objectKey(id));
+  if (!obj) return null;
+  return await obj.text();
 }
 
 const ALPHABET =

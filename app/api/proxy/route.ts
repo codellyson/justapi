@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { proxyRateLimit } from "@/src/server/rate-limit";
 
 // Node's fetch (undici) resolves `localhost` to ::1 first on many systems,
 // but most dev servers only listen on 127.0.0.1 — yielding ECONNREFUSED.
@@ -22,9 +23,19 @@ function normalizeLocalhost(rawUrl: string): {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await proxyRateLimit(request);
+  if (limited) return limited;
+
   const startTime = Date.now();
   try {
-    const body = await request.json();
+    const body = (await request.json()) as {
+      url?: string;
+      method?: string;
+      headers?: Record<string, string>;
+      body?: string;
+      params?: Record<string, unknown>;
+      isFormData?: boolean;
+    };
     const {
       url,
       method,
@@ -101,15 +112,27 @@ export async function POST(request: NextRequest) {
         : [];
 
     const contentType = response.headers.get("content-type") || "";
+    const ct = contentType.toLowerCase();
     let data: unknown;
 
-    if (contentType.includes("application/json")) {
+    if (ct.includes("application/json") || ct.includes("+json")) {
       try {
         data = await response.json();
       } catch {
         data = await response.text();
       }
-    } else if (contentType.includes("text/")) {
+    } else if (
+      ct.includes("text/") ||
+      ct.includes("javascript") ||
+      ct.includes("ecmascript") ||
+      ct.includes("xml") ||
+      ct.includes("yaml") ||
+      ct.includes("csv") ||
+      ct.includes("charset")
+    ) {
+      // Includes application/javascript (Swagger UI's swagger-ui-init.js embeds
+      // the spec) and other text-ish payloads that would otherwise be lost as a
+      // {}-serialized ArrayBuffer.
       data = await response.text();
     } else {
       const blob = await response.blob();

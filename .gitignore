@@ -33,3 +33,9 @@ dist-ssr
 
 # agent bridge flow storage
 .justapi/
+
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+.dev.vars
+cloudflare-env.d.ts

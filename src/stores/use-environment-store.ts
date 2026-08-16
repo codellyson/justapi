@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Environment } from '../utils/variables';
+import { isEmbedded } from '../canvas/embedded';
 
 interface EnvironmentState {
   environments: Environment[];
@@ -90,6 +91,13 @@ export const useEnvironmentStore = create<EnvironmentState>()(
     }),
     {
       name: STORAGE_KEY,
+      // In the iframe embed, a demo run's captures write variables here — keep
+      // them in memory only so they never touch the visitor's real environments.
+      storage: createJSONStorage(() =>
+        isEmbedded()
+          ? { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+          : localStorage
+      ),
     }
   )
 );

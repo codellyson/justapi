@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useReactFlow } from "@xyflow/react";
 import {
   Plus,
@@ -9,9 +10,11 @@ import {
   Layers,
   CodeXml,
   HelpCircle,
+  UserRound,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { useCanvasStore } from "../use-canvas-store";
+import { useSession } from "../../lib/auth-client";
 
 interface RailProps {
   libraryOpen: boolean;
@@ -52,6 +55,7 @@ export const Rail = ({
 }: RailProps) => {
   const { screenToFlowPosition } = useReactFlow();
   const addRequestNode = useCanvasStore((s) => s.addRequestNode);
+  const { data: session } = useSession();
 
   const centerPosition = () =>
     screenToFlowPosition({
@@ -123,6 +127,13 @@ export const Rail = ({
 
       <div className="flex-1" />
 
+      <Link
+        href={session ? "/account" : "/login"}
+        className={cn(railBtn, !session && "text-accent")}
+        title={session ? "Account & tokens" : "Sign in — sync & agent access"}
+      >
+        <UserRound className="h-4 w-4" />
+      </Link>
       <button
         type="button"
         onClick={onStartTour}

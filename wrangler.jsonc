@@ -4,6 +4,7 @@
   "main": ".open-next/worker.js",
   "compatibility_date": "2025-08-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "routes": [{ "pattern": "justapi.kreativekorna.com", "custom_domain": true }],
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -19,5 +20,14 @@
       "migrations_dir": "drizzle"
     }
   ],
-  "r2_buckets": [{ "binding": "SHARE_BUCKET", "bucket_name": "justapi-shares" }]
+  "r2_buckets": [{ "binding": "SHARE_BUCKET", "bucket_name": "justapi-shares" }],
+  // The proxy relays arbitrary user-supplied URLs, so it is rate limited per
+  // client IP. `period` only accepts 10 or 60.
+  "ratelimits": [
+    {
+      "name": "PROXY_RATE_LIMIT",
+      "namespace_id": "1001",
+      "simple": { "limit": 60, "period": 60 }
+    }
+  ]
 }

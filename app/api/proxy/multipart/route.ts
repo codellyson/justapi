@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { proxyRateLimit } from "@/src/server/rate-limit";
 
 // Mirrors the IPv6-localhost workaround in the JSON proxy.
 function normalizeLocalhost(rawUrl: string): {
@@ -19,6 +20,9 @@ function normalizeLocalhost(rawUrl: string): {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await proxyRateLimit(request);
+  if (limited) return limited;
+
   const startTime = Date.now();
   try {
     const targetUrl = request.headers.get("x-qr-target-url");

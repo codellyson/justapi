@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { proxyRateLimit } from "@/src/server/rate-limit";
 
 // Node's fetch (undici) resolves `localhost` to ::1 first on many systems,
 // but most dev servers only listen on 127.0.0.1 — yielding ECONNREFUSED.
@@ -22,6 +23,9 @@ function normalizeLocalhost(rawUrl: string): {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await proxyRateLimit(request);
+  if (limited) return limited;
+
   const startTime = Date.now();
   try {
     const body = (await request.json()) as {

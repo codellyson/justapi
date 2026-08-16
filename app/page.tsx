@@ -2,14 +2,34 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ThemeToggle } from "@/src/marketing/theme-toggle";
 
+const TITLE = "JustAPI — an API client that thinks in flows";
 const DESCRIPTION =
   "Drop requests on a canvas, wire a response value into the next call, and run the whole chain. Import cURL, fetch, HAR, or OpenAPI — and let an agent drive it.";
+// Social cards truncate near 125 characters, so they get a tighter line than
+// the search-result description.
+const SOCIAL_DESCRIPTION =
+  "Drop requests on a canvas, wire one response into the next, and run the whole chain. Import cURL, HAR, or OpenAPI.";
 
+// Next replaces `openGraph`/`twitter` wholesale rather than deep-merging them,
+// so every field the layout sets has to be repeated here or it is dropped.
 export const metadata: Metadata = {
-  title: "JustAPI — an API client that thinks in flows",
+  title: TITLE,
   description: DESCRIPTION,
   alternates: { canonical: "/" },
-  openGraph: { title: "JustAPI — an API client that thinks in flows", description: DESCRIPTION, url: "/" },
+  openGraph: {
+    type: "website",
+    siteName: "JustAPI",
+    locale: "en_US",
+    title: TITLE,
+    description: SOCIAL_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    creator: "@kreativekorna",
+    title: TITLE,
+    description: SOCIAL_DESCRIPTION,
+  },
 };
 
 const Brand = ({ size = "md" }: { size?: "md" | "sm" }) => (

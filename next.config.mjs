@@ -14,7 +14,10 @@ const nextConfig = {
       { source: '/expand', destination: '/app', permanent: false },
       {
         source: '/',
-        has: [{ type: 'query', key: 's', value: '(?<s>.*)' }],
+        // `.+`, not `.*`: an empty match still satisfies the condition, and the
+        // destination then fails to compile with a blank :s — which 500s every
+        // plain `/` request.
+        has: [{ type: 'query', key: 's', value: '(?<s>.+)' }],
         destination: '/app?s=:s',
         permanent: false,
       },

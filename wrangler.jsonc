@@ -14,8 +14,8 @@
       "binding": "DB",
       "database_name": "justapi",
       // Local dev uses miniflare's own SQLite; this id is only used for
-      // remote (`--remote` / deploy). Replace it after `wrangler d1 create justapi`.
-      "database_id": "REPLACE_WITH_wrangler_d1_create_ID",
+      // remote (`--remote` / deploy).
+      "database_id": "3da0d6bd-5bc7-42f5-b901-d5b372620022",
       "migrations_dir": "drizzle"
     }
   ],

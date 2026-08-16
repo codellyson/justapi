@@ -1,32 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-const AUTH_PAGES = ["/login", "/signup"];
-
 /**
  * The canvas is open to everyone — anonymous users work locally (localStorage).
  * Only account-scoped pages require a session; signing in unlocks the remote
  * features (agent bridge, sharing, token minting). This is an optimistic
  * cookie-presence check (no DB round-trip — the API handlers do the real
  * verification via requireAuth).
+ *
+ * /login and /signup are deliberately excluded: bouncing cookie-bearing visitors
+ * off them locks out anyone whose cookie outlived its session. Those pages verify
+ * against D1 themselves and redirect only on a confirmed session.
  */
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const hasSession = Boolean(getSessionCookie(request));
-
-  // /account manages the signed-in user — bounce anonymous visitors to login.
-  if (!hasSession && pathname.startsWith("/account")) {
+  if (!getSessionCookie(request)) {
     const url = new URL("/login", request.url);
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(url);
-  }
-  // Signed-in users have no reason to see the auth pages.
-  if (hasSession && AUTH_PAGES.includes(pathname)) {
-    return NextResponse.redirect(new URL("/", request.url));
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/account", "/account/:path*", "/login", "/signup"],
+  matcher: ["/account", "/account/:path*"],
 };

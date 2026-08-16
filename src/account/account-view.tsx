@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/src/utils/cn";
 import { authClient, useSession, signOut } from "@/src/lib/auth-client";
-import { GoogleIcon, GithubIcon } from "@/src/auth/provider-icons";
+import { GithubIcon } from "@/src/auth/provider-icons";
 import type { SocialProviderFlags } from "@/src/server/social-providers";
 
 type KeyRow = {
@@ -35,7 +35,6 @@ type AccountRow = {
 };
 
 const providerMeta = {
-  google: { label: "Google", Icon: GoogleIcon },
   github: { label: "GitHub", Icon: GithubIcon },
 } as const;
 type OAuthProvider = keyof typeof providerMeta;

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "../utils/cn";
 import { authClient } from "../lib/auth-client";
 import type { SocialProviderFlags } from "../server/social-providers";
-import { GoogleIcon, GithubIcon } from "./provider-icons";
+import { GithubIcon } from "./provider-icons";
 
 type Mode = "login" | "signup";
 
@@ -47,7 +47,7 @@ export const AuthForm = ({
     router.refresh();
   };
 
-  const social = async (provider: "google" | "github") => {
+  const social = async (provider: "github") => {
     setError(null);
     setBusy(true);
     // Redirects to the provider on success; only lands back here on failure.
@@ -59,7 +59,7 @@ export const AuthForm = ({
   };
 
   const isSignup = mode === "signup";
-  const hasSocial = Boolean(providers?.google || providers?.github);
+  const hasSocial = Boolean(providers?.github);
 
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-bg px-4 font-sans">
@@ -79,17 +79,6 @@ export const AuthForm = ({
         {hasSocial && (
           <>
             <div className="space-y-2">
-              {providers?.google && (
-                <button
-                  type="button"
-                  onClick={() => social("google")}
-                  disabled={busy}
-                  className="flex w-full items-center justify-center gap-2.5 rounded-md border border-border/60 bg-bg px-3 py-2 text-[13px] font-medium text-primary transition-colors hover:bg-bg/60 disabled:opacity-60"
-                >
-                  <GoogleIcon className="h-4 w-4" />
-                  Continue with Google
-                </button>
-              )}
               {providers?.github && (
                 <button
                   type="button"

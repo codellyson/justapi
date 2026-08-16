@@ -25,16 +25,9 @@ export async function getAuth() {
 
 type Creds = { clientId: string; clientSecret: string };
 function socialProvidersFrom(env: CloudflareEnv): {
-  google?: Creds;
   github?: Creds;
 } {
-  const providers: { google?: Creds; github?: Creds } = {};
-  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
-    providers.google = {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-    };
-  }
+  const providers: { github?: Creds } = {};
   if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
     providers.github = {
       clientId: env.GITHUB_CLIENT_ID,

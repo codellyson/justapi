@@ -5,6 +5,7 @@
   "compatibility_date": "2025-08-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "routes": [{ "pattern": "justapi.kreativekorna.com", "custom_domain": true }],
+  "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
